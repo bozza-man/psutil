@@ -16,21 +16,18 @@ name: build
 jobs:
   # Linux + macOS + Windows Python 3
   py3:
-    name: py3-${{ matrix.os }}-${{ startsWith(matrix.os, 'windows') && matrix.archs || 'all' }}
+    name: "py3, ${{ matrix.os }}, ${{ matrix.archs }}"
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-        - os: ubuntu-latest
-          archs: "x86_64 i686"
-        - os: macos-12
-          archs: "x86_64 arm64"
-        - os: windows-2019
-          archs: "AMD64"
-        - os: windows-2019
-          archs: "x86"
+          - {os: macos-12, archs: "x86_64 arm64"}
+          - {os: ubuntu-latest, archs: "x86_64 i686"}
+          - {os: ubuntu-latest, archs: "aarch64"}
+          - {os: windows-2019, archs: "AMD64"}
+          - {os: windows-2019, archs: "x86"}
 
     steps:
     - name: Cancel previous runs
@@ -42,6 +39,10 @@ jobs:
     - uses: actions/setup-python@v4
       with:
         python-version: 3.11
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+      if: matrix.archs == 'aarch64'
 
     - name: Create wheels + run tests
       uses: pypa/cibuildwheel@v2.11.2

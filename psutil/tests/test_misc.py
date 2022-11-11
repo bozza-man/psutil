@@ -44,6 +44,7 @@ from psutil.tests import HAS_NET_IO_COUNTERS
 from psutil.tests import HAS_SENSORS_BATTERY
 from psutil.tests import HAS_SENSORS_FANS
 from psutil.tests import HAS_SENSORS_TEMPERATURES
+from psutil.tests import QEMU_USER
 from psutil.tests import PYTHON_EXE
 from psutil.tests import PYTHON_EXE_ENV
 from psutil.tests import SCRIPTS_DIR
@@ -897,6 +898,7 @@ class TestScripts(PsutilTestCase):
     def test_netstat(self):
         self.assert_stdout('netstat.py')
 
+    @unittest.skipIf(QEMU_USER, 'QEMU user not supported')
     def test_ifconfig(self):
         self.assert_stdout('ifconfig.py')
 

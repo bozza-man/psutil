@@ -86,7 +86,7 @@ __all__ = [
     "HAS_IONICE", "HAS_MEMORY_MAPS", "HAS_PROC_CPU_NUM", "HAS_RLIMIT",
     "HAS_SENSORS_BATTERY", "HAS_BATTERY", "HAS_SENSORS_FANS",
     "HAS_SENSORS_TEMPERATURES", "MACOS_11PLUS",
-    "MACOS_12PLUS", "COVERAGE",
+    "MACOS_12PLUS", "QEMU_USER", "COVERAGE",
     # subprocesses
     'pyrun', 'terminate', 'reap_children', 'spawn_testproc', 'spawn_zombie',
     'spawn_children_pair',
@@ -125,6 +125,7 @@ APPVEYOR = 'APPVEYOR' in os.environ
 GITHUB_ACTIONS = 'GITHUB_ACTIONS' in os.environ or 'CIBUILDWHEEL' in os.environ
 CI_TESTING = APPVEYOR or GITHUB_ACTIONS
 COVERAGE = 'COVERAGE_RUN' in os.environ
+QEMU_USER = LINUX and GITHUB_ACTIONS and platform.machine() == 'aarch64'
 # are we a 64 bit process?
 IS_64BIT = sys.maxsize > 2 ** 32
 
