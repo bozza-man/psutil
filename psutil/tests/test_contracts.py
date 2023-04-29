@@ -9,13 +9,13 @@ returned types and APIs availability.
 Some of these are duplicates of tests test_system.py and test_process.py
 """
 
+import enum
 import errno
 import multiprocessing
 import os
 import platform
 import signal
 import stat
-import sys
 import time
 import traceback
 import unittest
@@ -32,10 +32,6 @@ from psutil import OSX
 from psutil import POSIX
 from psutil import SUNOS
 from psutil import WINDOWS
-from psutil._compat import FileNotFoundError
-from psutil._compat import long
-from psutil._compat import range
-from psutil._compat import unicode
 from psutil.tests import APPVEYOR
 from psutil.tests import CI_TESTING
 from psutil.tests import GITHUB_ACTIONS
@@ -49,7 +45,6 @@ from psutil.tests import VALID_PROC_STATUSES
 from psutil.tests import PsutilTestCase
 from psutil.tests import check_connection_ntuple
 from psutil.tests import create_sockets
-from psutil.tests import enum
 from psutil.tests import is_namedtuple
 from psutil.tests import kernel_version
 from psutil.tests import process_namespace
@@ -243,13 +238,13 @@ class TestSystemAPITypes(PsutilTestCase):
     def test_cpu_freq(self):
         if psutil.cpu_freq() is None:
             raise self.skipTest("cpu_freq() returns None")
-        self.assert_ntuple_of_nums(psutil.cpu_freq(), type_=(float, int, long))
+        self.assert_ntuple_of_nums(psutil.cpu_freq(), type_=(float, int))
 
     def test_disk_io_counters(self):
         # Duplicate of test_system.py. Keep it anyway.
         for k, v in psutil.disk_io_counters(perdisk=True).items():
             self.assertIsInstance(k, str)
-            self.assert_ntuple_of_nums(v, type_=(int, long))
+            self.assert_ntuple_of_nums(v, type_=(int,))
 
     def test_disk_partitions(self):
         # Duplicate of test_system.py. Keep it anyway.
@@ -274,7 +269,7 @@ class TestSystemAPITypes(PsutilTestCase):
         for ifname, addrs in psutil.net_if_addrs().items():
             self.assertIsInstance(ifname, str)
             for addr in addrs:
-                if enum is not None and not PYPY:
+                if not PYPY:
                     self.assertIsInstance(addr.family, enum.IntEnum)
                 else:
                     self.assertIsInstance(addr.family, int)
@@ -287,10 +282,7 @@ class TestSystemAPITypes(PsutilTestCase):
         for ifname, info in psutil.net_if_stats().items():
             self.assertIsInstance(ifname, str)
             self.assertIsInstance(info.isup, bool)
-            if enum is not None:
-                self.assertIsInstance(info.duplex, enum.IntEnum)
-            else:
-                self.assertIsInstance(info.duplex, int)
+            self.assertIsInstance(info.duplex, enum.IntEnum)
             self.assertIsInstance(info.speed, int)
             self.assertIsInstance(info.mtu, int)
 
@@ -341,10 +333,7 @@ class TestProcessWaitType(PsutilTestCase):
         p.terminate()
         code = p.wait()
         self.assertEqual(code, -signal.SIGTERM)
-        if enum is not None:
-            self.assertIsInstance(code, enum.IntEnum)
-        else:
-            self.assertIsInstance(code, int)
+        self.assertIsInstance(code, enum.IntEnum)
 
 
 # ===================================================================
@@ -452,7 +441,7 @@ class TestFetchAllProcesses(PsutilTestCase):
             self.assertIsInstance(part, str)
 
     def exe(self, ret, info):
-        self.assertIsInstance(ret, (str, unicode))
+        self.assertIsInstance(ret, str)
         self.assertEqual(ret.strip(), ret)
         if ret:
             if WINDOWS and not ret.endswith('.exe'):
@@ -475,11 +464,11 @@ class TestFetchAllProcesses(PsutilTestCase):
         self.assertGreaterEqual(ret, 0)
 
     def ppid(self, ret, info):
-        self.assertIsInstance(ret, (int, long))
+        self.assertIsInstance(ret, int)
         self.assertGreaterEqual(ret, 0)
 
     def name(self, ret, info):
-        self.assertIsInstance(ret, (str, unicode))
+        self.assertIsInstance(ret, str)
         if APPVEYOR and not ret and info['status'] == 'stopped':
             return
         # on AIX, "<exiting>" processes don't have names
@@ -531,7 +520,7 @@ class TestFetchAllProcesses(PsutilTestCase):
     def io_counters(self, ret, info):
         assert is_namedtuple(ret)
         for field in ret:
-            self.assertIsInstance(field, (int, long))
+            self.assertIsInstance(field, int)
             if field != -1:
                 self.assertGreaterEqual(field, 0)
 
@@ -590,7 +579,7 @@ class TestFetchAllProcesses(PsutilTestCase):
     def memory_info(self, ret, info):
         assert is_namedtuple(ret)
         for value in ret:
-            self.assertIsInstance(value, (int, long))
+            self.assertIsInstance(value, int)
             self.assertGreaterEqual(value, 0)
         if WINDOWS:
             self.assertGreaterEqual(ret.peak_wset, ret.wset)
@@ -603,7 +592,7 @@ class TestFetchAllProcesses(PsutilTestCase):
         total = psutil.virtual_memory().total
         for name in ret._fields:
             value = getattr(ret, name)
-            self.assertIsInstance(value, (int, long))
+            self.assertIsInstance(value, int)
             self.assertGreaterEqual(value, 0, msg=(name, value))
             if LINUX or OSX and name in ('vms', 'data'):
                 # On Linux there are processes (e.g. 'goa-daemon') whose
@@ -652,7 +641,7 @@ class TestFetchAllProcesses(PsutilTestCase):
                 check_connection_ntuple(conn)
 
     def cwd(self, ret, info):
-        self.assertIsInstance(ret, (str, unicode))
+        self.assertIsInstance(ret, str)
         self.assertEqual(ret.strip(), ret)
         if ret:
             assert os.path.isabs(ret), ret
@@ -708,7 +697,7 @@ class TestFetchAllProcesses(PsutilTestCase):
                     if not WINDOWS:
                         assert value, repr(value)
                 else:
-                    self.assertIsInstance(value, (int, long))
+                    self.assertIsInstance(value, int)
                     self.assertGreaterEqual(value, 0)
 
     def num_handles(self, ret, info):
@@ -723,15 +712,12 @@ class TestFetchAllProcesses(PsutilTestCase):
             priorities = [getattr(psutil, x) for x in dir(psutil)
                           if x.endswith('_PRIORITY_CLASS')]
             self.assertIn(ret, priorities)
-            if sys.version_info[0] >= 3:
-                self.assertIsInstance(ret, enum.IntEnum)
-            else:
-                self.assertIsInstance(ret, int)
+            self.assertIsInstance(ret, enum.IntEnum)
 
     def num_ctx_switches(self, ret, info):
         assert is_namedtuple(ret)
         for value in ret:
-            self.assertIsInstance(value, (int, long))
+            self.assertIsInstance(value, int)
             self.assertGreaterEqual(value, 0)
 
     def rlimit(self, ret, info):

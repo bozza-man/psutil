@@ -11,6 +11,7 @@ import os
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from collections import namedtuple
+from shutil import which
 
 from . import _common
 from . import _psposix
@@ -28,10 +29,6 @@ from ._common import debug
 from ._common import memoize
 from ._common import memoize_when_activated
 from ._common import usage_percent
-from ._compat import FileNotFoundError
-from ._compat import PermissionError
-from ._compat import ProcessLookupError
-from ._compat import which
 
 
 __extra__all__ = []

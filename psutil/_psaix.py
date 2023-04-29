@@ -28,10 +28,6 @@ from ._common import conn_to_ntuple
 from ._common import get_procfs_path
 from ._common import memoize_when_activated
 from ._common import usage_percent
-from ._compat import PY3
-from ._compat import FileNotFoundError
-from ._compat import PermissionError
-from ._compat import ProcessLookupError
 
 
 __extra__all__ = ["PROCFS_PATH"]
@@ -148,9 +144,8 @@ def cpu_count_cores():
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
-    if PY3:
-        stdout, stderr = [x.decode(sys.stdout.encoding)
-                          for x in (stdout, stderr)]
+    stdout, stderr = [x.decode(sys.stdout.encoding)
+                      for x in (stdout, stderr)]
     if p.returncode != 0:
         raise RuntimeError("%r command error\n%s" % (cmd, stderr))
     processors = stdout.strip().splitlines()
@@ -248,9 +243,8 @@ def net_if_stats():
         p = subprocess.Popen(["/usr/bin/entstat", "-d", name],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
-        if PY3:
-            stdout, stderr = [x.decode(sys.stdout.encoding)
-                              for x in (stdout, stderr)]
+        stdout, stderr = [x.decode(sys.stdout.encoding)
+                          for x in (stdout, stderr)]
         if p.returncode == 0:
             re_result = re.search(
                 r"Running: (\d+) Mbps.*?(\w+) Duplex", stdout)
@@ -510,9 +504,8 @@ class Process(object):
         p = subprocess.Popen(["/usr/bin/procfiles", "-n", str(self.pid)],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
-        if PY3:
-            stdout, stderr = [x.decode(sys.stdout.encoding)
-                              for x in (stdout, stderr)]
+        stdout, stderr = [x.decode(sys.stdout.encoding)
+                          for x in (stdout, stderr)]
         if "no such process" in stderr.lower():
             raise NoSuchProcess(self.pid, self._name)
         procfiles = re.findall(r"(\d+): S_IFREG.*\s*.*name:(.*)\n", stdout)

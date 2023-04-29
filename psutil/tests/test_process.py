@@ -20,6 +20,7 @@ import textwrap
 import time
 import types
 import unittest
+from unittest import mock
 
 import psutil
 from psutil import AIX
@@ -33,10 +34,6 @@ from psutil import POSIX
 from psutil import SUNOS
 from psutil import WINDOWS
 from psutil._common import open_text
-from psutil._compat import PY3
-from psutil._compat import FileNotFoundError
-from psutil._compat import long
-from psutil._compat import super
 from psutil.tests import APPVEYOR
 from psutil.tests import CI_TESTING
 from psutil.tests import GITHUB_ACTIONS
@@ -58,7 +55,6 @@ from psutil.tests import ThreadTask
 from psutil.tests import call_until
 from psutil.tests import copyload_shared_lib
 from psutil.tests import create_exe
-from psutil.tests import mock
 from psutil.tests import process_namespace
 from psutil.tests import reap_children
 from psutil.tests import retry_on_failure
@@ -323,10 +319,7 @@ class TestProcess(PsutilTestCase):
         # test writes
         io1 = p.io_counters()
         with open(self.get_testfn(), 'wb') as f:
-            if PY3:
-                f.write(bytes("x" * 1000000, 'ascii'))
-            else:
-                f.write("x" * 1000000)
+            f.write(bytes("x" * 1000000, 'ascii'))
         io2 = p.io_counters()
         self.assertGreaterEqual(io2.write_count, io1.write_count)
         self.assertGreaterEqual(io2.write_bytes, io1.write_bytes)
@@ -467,8 +460,7 @@ class TestProcess(PsutilTestCase):
             with self.assertRaises(IOError) as exc:
                 with open(testfn, "wb") as f:
                     f.write(b"X" * 1025)
-            self.assertEqual(exc.exception.errno if PY3 else exc.exception[0],
-                             errno.EFBIG)
+            self.assertEqual(exc.exception.errno, errno.EFBIG)
         finally:
             p.rlimit(psutil.RLIMIT_FSIZE, (soft, hard))
             self.assertEqual(p.rlimit(psutil.RLIMIT_FSIZE), (soft, hard))
@@ -650,7 +642,7 @@ class TestProcess(PsutilTestCase):
                 elif fname in ('addr', 'perms'):
                     assert value, value
                 else:
-                    self.assertIsInstance(value, (int, long))
+                    self.assertIsInstance(value, int)
                     assert value >= 0, value
 
     @unittest.skipIf(not HAS_MEMORY_MAPS, "not supported")

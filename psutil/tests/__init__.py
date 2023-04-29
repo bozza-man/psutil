@@ -13,6 +13,7 @@ from __future__ import print_function
 import atexit
 import contextlib
 import ctypes
+import enum
 import errno
 import functools
 import gc
@@ -35,6 +36,7 @@ import threading
 import time
 import unittest
 import warnings
+from shutil import which
 from socket import AF_INET
 from socket import AF_INET6
 from socket import SOCK_STREAM
@@ -50,27 +52,7 @@ from psutil._common import bytes2human
 from psutil._common import memoize
 from psutil._common import print_color
 from psutil._common import supports_ipv6
-from psutil._compat import PY3
-from psutil._compat import FileExistsError
-from psutil._compat import FileNotFoundError
-from psutil._compat import range
-from psutil._compat import super
-from psutil._compat import u
-from psutil._compat import unicode
-from psutil._compat import which
 
-
-try:
-    from unittest import mock  # py3
-except ImportError:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        import mock  # NOQA - requires "pip install mock"
-
-if sys.version_info[0] >= 3:
-    import enum
-else:
-    enum = None
 
 if POSIX:
     from psutil._psposix import wait_pid
@@ -182,12 +164,9 @@ if os.name == 'java':
     TESTFN_PREFIX = '$psutil-%s-' % os.getpid()
 else:
     TESTFN_PREFIX = '@psutil-%s-' % os.getpid()
-UNICODE_SUFFIX = u("-ƒőő")
+UNICODE_SUFFIX = "-ƒőő"
 # An invalid unicode string.
-if PY3:
-    INVALID_UNICODE_SUFFIX = b"f\xc0\x80".decode('utf8', 'surrogateescape')
-else:
-    INVALID_UNICODE_SUFFIX = "f\xc0\x80"
+INVALID_UNICODE_SUFFIX = b"f\xc0\x80".decode('utf8', 'surrogateescape')
 ASCII_FS = sys.getfilesystemencoding().lower() in ('ascii', 'us-ascii')
 
 # --- paths
@@ -438,10 +417,7 @@ def spawn_zombie():
             s = socket.socket(socket.AF_UNIX)
             with contextlib.closing(s):
                 s.connect('%s')
-                if sys.version_info < (3, ):
-                    pid = str(os.getpid())
-                else:
-                    pid = bytes(str(os.getpid()), 'ascii')
+                pid = bytes(str(os.getpid()), 'ascii')
                 s.sendall(pid)
         """ % unix_file)
     tfile = None
@@ -501,10 +477,7 @@ def sh(cmd, **kwds):
         cmd = shlex.split(cmd)
     p = subprocess.Popen(cmd, **kwds)
     _subprocesses_started.add(p)
-    if PY3:
-        stdout, stderr = p.communicate(timeout=GLOBAL_TIMEOUT)
-    else:
-        stdout, stderr = p.communicate()
+    stdout, stderr = p.communicate(timeout=GLOBAL_TIMEOUT)
     if p.returncode != 0:
         raise RuntimeError(stderr)
     if stderr:
@@ -525,10 +498,7 @@ def terminate(proc_or_pid, sig=signal.SIGTERM, wait_timeout=GLOBAL_TIMEOUT):
     Return process exit status.
     """
     def wait(proc, timeout):
-        if isinstance(proc, subprocess.Popen) and not PY3:
-            proc.wait()
-        else:
-            proc.wait(timeout)
+        proc.wait(timeout)
         if WINDOWS and isinstance(proc, subprocess.Popen):
             # Otherwise PID may still hang around.
             try:
@@ -664,14 +634,7 @@ def get_winver():
     if not WINDOWS:
         raise NotImplementedError("not WINDOWS")
     wv = sys.getwindowsversion()
-    if hasattr(wv, 'service_pack_major'):  # python >= 2.7
-        sp = wv.service_pack_major or 0
-    else:
-        r = re.search(r"\s\d$", wv[4])
-        if r:
-            sp = int(r.group(0))
-        else:
-            sp = 0
+    sp = wv.service_pack_major or 0
     return (wv[0], wv[1], sp)
 
 
@@ -727,10 +690,7 @@ class retry(object):
                         self.logfun(exc)
                     self.sleep()
                     continue
-            if PY3:
-                raise exc
-            else:
-                raise
+            raise exc
 
         # This way the user of the decorated function can change config
         # parameters.
@@ -893,16 +853,6 @@ class TestCase(unittest.TestCase):
     # add support for the new name.
     if not hasattr(unittest.TestCase, 'assertRaisesRegex'):
         assertRaisesRegex = unittest.TestCase.assertRaisesRegexp
-
-    # ...otherwise multiprocessing.Pool complains
-    if not PY3:
-        def runTest(self):
-            pass
-
-        @contextlib.contextmanager
-        def subTest(self, *args, **kw):
-            # fake it for python 2.7
-            yield
 
 
 # monkey patch default unittest.TestCase
@@ -1593,20 +1543,16 @@ def check_net_address(addr, family):
     IPv6 and MAC addresses.
     """
     import ipaddress  # python >= 3.3 / requires "pip install ipaddress"
-    if enum and PY3 and not PYPY:
+    if not PYPY:
         assert isinstance(family, enum.IntEnum), family
     if family == socket.AF_INET:
         octs = [int(x) for x in addr.split('.')]
         assert len(octs) == 4, addr
         for num in octs:
             assert 0 <= num <= 255, addr
-        if not PY3:
-            addr = unicode(addr)
         ipaddress.IPv4Address(addr)
     elif family == socket.AF_INET6:
         assert isinstance(addr, str), addr
-        if not PY3:
-            addr = unicode(addr)
         ipaddress.IPv6Address(addr)
     elif family == psutil.AF_LINK:
         assert re.match(r'([a-fA-F0-9]{2}[:|\-]?){6}', addr) is not None, addr
@@ -1630,10 +1576,7 @@ def check_connection_ntuple(conn):
 
     def check_family(conn):
         assert conn.family in (AF_INET, AF_INET6, AF_UNIX), conn.family
-        if enum is not None:
-            assert isinstance(conn.family, enum.IntEnum), conn
-        else:
-            assert isinstance(conn.family, int), conn
+        assert isinstance(conn.family, enum.IntEnum), conn
         if conn.family == AF_INET:
             # actually try to bind the local socket; ignore IPv6
             # sockets as their address might be represented as
@@ -1654,10 +1597,7 @@ def check_connection_ntuple(conn):
         SOCK_SEQPACKET = getattr(socket, "SOCK_SEQPACKET", object())
         assert conn.type in (socket.SOCK_STREAM, socket.SOCK_DGRAM,
                              SOCK_SEQPACKET), conn.type
-        if enum is not None:
-            assert isinstance(conn.type, enum.IntEnum), conn
-        else:
-            assert isinstance(conn.type, int), conn
+        assert isinstance(conn.type, enum.IntEnum), conn
         if conn.type == socket.SOCK_DGRAM:
             assert conn.status == psutil.CONN_NONE, conn.status
 
@@ -1698,28 +1638,17 @@ def check_connection_ntuple(conn):
 
 def reload_module(module):
     """Backport of importlib.reload of Python 3.3+."""
-    try:
-        import importlib
-        if not hasattr(importlib, 'reload'):  # python <=3.3
-            raise ImportError
-    except ImportError:
-        import imp
-        return imp.reload(module)
-    else:
-        return importlib.reload(module)
+    import importlib
+    return importlib.reload(module)
 
 
 def import_module_by_path(path):
+    import importlib.util
     name = os.path.splitext(os.path.basename(path))[0]
-    if sys.version_info[0] == 2:
-        import imp
-        return imp.load_source(name, path)
-    else:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(name, path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 # ===================================================================

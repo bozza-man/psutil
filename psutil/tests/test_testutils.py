@@ -17,6 +17,7 @@ import socket
 import stat
 import subprocess
 import unittest
+from unittest import mock
 
 import psutil
 import psutil.tests
@@ -40,7 +41,6 @@ from psutil.tests import chdir
 from psutil.tests import create_sockets
 from psutil.tests import get_free_port
 from psutil.tests import is_namedtuple
-from psutil.tests import mock
 from psutil.tests import process_namespace
 from psutil.tests import reap_children
 from psutil.tests import retry

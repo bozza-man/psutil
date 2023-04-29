@@ -34,7 +34,6 @@ else:
     PYTHON = os.getenv('PYTHON', sys.executable)
 RUNNER_PY = 'psutil\\tests\\runner.py'
 GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
-PY3 = sys.version_info[0] == 3
 HERE = os.path.abspath(os.path.dirname(__file__))
 ROOT_DIR = os.path.realpath(os.path.join(HERE, "..", ".."))
 PYPY = '__pypy__' in sys.builtin_module_names
@@ -42,6 +41,7 @@ DEPS = [
     "coverage",
     "flake8",
     "flake8-blind-except",
+    "flake8-bugbear",
     "flake8-debugger",
     "flake8-print",
     "nose",
@@ -54,20 +54,12 @@ DEPS = [
     "wheel",
 ]
 
-if sys.version_info[0] == 2:
-    DEPS.append('mock')
-    DEPS.append('ipaddress')
-    DEPS.append('enum34')
-else:
-    DEPS.append('flake8-bugbear')
-
 if not PYPY:
     DEPS.append("pywin32")
     DEPS.append("wmi")
 
 _cmds = {}
-if PY3:
-    basestring = str
+basestring = str
 
 GREEN = 2
 LIGHTBLUE = 3
@@ -227,14 +219,13 @@ def build():
     # order to allow "import psutil" when using the interactive interpreter
     # from within psutil root directory.
     cmd = [PYTHON, "setup.py", "build_ext", "-i"]
-    if sys.version_info[:2] >= (3, 6) and (os.cpu_count() or 1) > 1:
+    if (os.cpu_count() or 1) > 1:
         cmd += ['--parallel', str(os.cpu_count())]
     # Print coloured warnings in real time.
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
         for line in iter(p.stdout.readline, b''):
-            if PY3:
-                line = line.decode()
+            line = line.decode()
             line = line.strip()
             if 'warning' in line:
                 win_colorprint(line, YELLOW)
@@ -273,10 +264,7 @@ def install_pip():
     try:
         sh('%s -c "import pip"' % PYTHON)
     except SystemExit:
-        if PY3:
-            from urllib.request import urlopen
-        else:
-            from urllib2 import urlopen
+        from urllib.request import urlopen
 
         if hasattr(ssl, '_create_unverified_context'):
             ctx = ssl._create_unverified_context()
@@ -385,8 +373,7 @@ def setup_dev_env():
 def flake8():
     """Run flake8 against all py files"""
     py_files = subprocess.check_output("git ls-files")
-    if PY3:
-        py_files = py_files.decode()
+    py_files = py_files.decode()
     py_files = [x for x in py_files.split() if x.endswith('.py')]
     py_files = ' '.join(py_files)
     sh("%s -m flake8 %s" % (PYTHON, py_files), nolog=True)
@@ -508,12 +495,6 @@ def print_api_speed():
     sh("%s -Wa scripts\\internal\\print_api_speed.py" % PYTHON)
 
 
-def download_appveyor_wheels():
-    """Download appveyor wheels."""
-    sh("%s -Wa scripts\\internal\\download_wheels_appveyor.py "
-       "--user giampaolo --project psutil" % PYTHON)
-
-
 def generate_manifest():
     """Generate MANIFEST.in file."""
     script = "scripts\\internal\\generate_manifest.py"
@@ -566,7 +547,6 @@ def parse_args():
     sp.add_parser('build', help="build")
     sp.add_parser('clean', help="deletes dev files")
     sp.add_parser('coverage', help="run coverage tests.")
-    sp.add_parser('download-appveyor-wheels', help="download wheels.")
     sp.add_parser('generate-manifest', help="generate MANIFEST.in file")
     sp.add_parser('help', help="print this help")
     sp.add_parser('install', help="build + install in develop/edit mode")

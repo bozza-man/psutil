@@ -1,5 +1,5 @@
 # Shortcuts for various tasks (UNIX only).
-# To use a specific Python version run: "make install PYTHON=python3.3"
+# To use a specific Python version run: "make install PYTHON=python3.6"
 # You can set the variables below from the command line.
 
 # Configurable.
@@ -31,22 +31,16 @@ PY3_DEPS = \
 	twine \
 	virtualenv \
 	wheel
-PY2_DEPS = \
-	futures \
-	ipaddress \
-	mock
 PY_DEPS = `$(PYTHON) -c \
 	"import sys; \
-	py3 = sys.version_info[0] == 3; \
 	py38 = sys.version_info[:2] >= (3, 8); \
-	py3_extra = ' abi3audit' if py38 else ''; \
-	print('$(PY3_DEPS)' + py3_extra if py3 else '$(PY2_DEPS)')"`
+	extra = ' abi3audit' if py38 else ''; \
+	print('$(PY3_DEPS)' + extra)"`
 NUM_WORKERS = `$(PYTHON) -c "import os; print(os.cpu_count() or 1)"`
 # "python3 setup.py build" can be parallelized on Python >= 3.6.
 BUILD_OPTS = `$(PYTHON) -c \
-	"import sys, os; \
-	py36 = sys.version_info[:2] >= (3, 6); \
-	cpus = os.cpu_count() or 1 if py36 else 1; \
+	"import os; \
+	cpus = os.cpu_count() or 1; \
 	print('--parallel %s' % cpus if cpus > 1 else '')"`
 # In not in a virtualenv, add --user options for install commands.
 INSTALL_OPTS = `$(PYTHON) -c \
@@ -106,8 +100,7 @@ install-pip:  ## Install pip (no-op if already installed).
 	@$(PYTHON) -c \
 		"import sys, ssl, os, pkgutil, tempfile, atexit; \
 		sys.exit(0) if pkgutil.find_loader('pip') else None; \
-		pyexc = 'from urllib.request import urlopen' if sys.version_info[0] == 3 else 'from urllib2 import urlopen'; \
-		exec(pyexc); \
+		from urllib.request import urlopen; \
 		ctx = ssl._create_unverified_context() if hasattr(ssl, '_create_unverified_context') else None; \
 		kw = dict(context=ctx) if ctx else {}; \
 		req = urlopen('https://bootstrap.pypa.io/get-pip.py', **kw); \
@@ -249,10 +242,6 @@ download-wheels-github:  ## Download latest wheels hosted on github.
 	$(PYTHON) scripts/internal/download_wheels_github.py --tokenfile=~/.github.token
 	${MAKE} print-dist
 
-download-wheels-appveyor:  ## Download latest wheels hosted on appveyor.
-	$(PYTHON) scripts/internal/download_wheels_appveyor.py
-	${MAKE} print-dist
-
 check-sdist:  ## Check sanity of source distribution.
 	$(PYTHON) -m virtualenv --clear --no-wheel --quiet build/venv
 	build/venv/bin/python -m pip install -v --isolated --quiet dist/*.tar.gz
@@ -269,7 +258,6 @@ pre-release:  ## Check if we're ready to produce a new release.
 	${MAKE} check-sdist
 	${MAKE} install
 	${MAKE} download-wheels-github
-	${MAKE} download-wheels-appveyor
 	${MAKE} check-wheels
 	${MAKE} print-hashes
 	${MAKE} print-dist

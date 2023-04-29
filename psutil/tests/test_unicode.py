@@ -84,8 +84,6 @@ import psutil
 from psutil import BSD
 from psutil import POSIX
 from psutil import WINDOWS
-from psutil._compat import PY3
-from psutil._compat import u
 from psutil.tests import APPVEYOR
 from psutil.tests import ASCII_FS
 from psutil.tests import CI_TESTING
@@ -167,7 +165,6 @@ class BaseUnicodeTest(PsutilTestCase):
 
 @serialrun
 @unittest.skipIf(ASCII_FS, "ASCII fs")
-@unittest.skipIf(PYPY and not PY3, "too much trouble on PYPY2")
 class TestFSAPIs(BaseUnicodeTest):
     """Test FS APIs with a funky, valid, UTF8 path name."""
 
@@ -183,12 +180,9 @@ class TestFSAPIs(BaseUnicodeTest):
         safe_rmpath(cls.funky_name)
 
     def expect_exact_path_match(self):
-        # Do not expect psutil to correctly handle unicode paths on
-        # Python 2 if os.listdir() is not able either.
-        here = '.' if isinstance(self.funky_name, str) else u('.')
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            return self.funky_name in os.listdir(here)
+            return self.funky_name in os.listdir(".")
 
     # ---
 
@@ -246,13 +240,7 @@ class TestFSAPIs(BaseUnicodeTest):
     @unittest.skipIf(not POSIX, "POSIX only")
     def test_proc_connections(self):
         name = self.get_testfn(suffix=self.funky_suffix)
-        try:
-            sock = bind_unix_socket(name)
-        except UnicodeEncodeError:
-            if PY3:
-                raise
-            else:
-                raise unittest.SkipTest("not supported")
+        sock = bind_unix_socket(name)
         with closing(sock):
             conn = psutil.Process().connections('unix')[0]
             self.assertIsInstance(conn.laddr, str)
@@ -269,13 +257,7 @@ class TestFSAPIs(BaseUnicodeTest):
             raise ValueError("connection not found")
 
         name = self.get_testfn(suffix=self.funky_suffix)
-        try:
-            sock = bind_unix_socket(name)
-        except UnicodeEncodeError:
-            if PY3:
-                raise
-            else:
-                raise unittest.SkipTest("not supported")
+        sock = bind_unix_socket(name)
         with closing(sock):
             cons = psutil.net_connections(kind='unix')
             conn = find_sock(cons)
@@ -289,7 +271,6 @@ class TestFSAPIs(BaseUnicodeTest):
         psutil.disk_usage(dname)
 
     @unittest.skipIf(not HAS_MEMORY_MAPS, "not supported")
-    @unittest.skipIf(not PY3, "ctypes does not support unicode on PY2")
     @unittest.skipIf(PYPY, "unstable on PYPY")
     def test_memory_maps(self):
         # XXX: on Python 2, using ctypes.CDLL with a unicode path
@@ -323,7 +304,7 @@ class TestFSAPIsWithInvalidPath(TestFSAPIs):
 
 class TestNonFSAPIS(BaseUnicodeTest):
     """Unicode tests for non fs-related APIs."""
-    funky_suffix = UNICODE_SUFFIX if PY3 else 'è'
+    funky_suffix = UNICODE_SUFFIX
 
     @unittest.skipIf(not HAS_ENVIRON, "not supported")
     @unittest.skipIf(PYPY and WINDOWS, "segfaults on PYPY + WINDOWS")
