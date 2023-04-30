@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Copyright (c) 2009, Giampaolo Rodola'. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -20,7 +18,6 @@ sensors) in Python. Supported platforms:
 Works with Python versions 3.6+.
 """
 
-from __future__ import division
 
 import collections
 import contextlib
@@ -225,7 +222,7 @@ if (int(__version__.replace('.', '')) !=
     msg = "version conflict: %r C extension module was built for another " \
           "version of psutil" % _psplatform.cext.__file__
     if hasattr(_psplatform.cext, 'version'):
-        msg += " (%s instead of %s)" % (
+        msg += " ({} instead of {})".format(
             '.'.join([x for x in str(_psplatform.cext.version)]), __version__)
     else:
         msg += " (different than %s)" % __version__
@@ -290,7 +287,7 @@ def _pprint_secs(secs):
 # =====================================================================
 
 
-class Process(object):
+class Process:
     """Represents an OS process with the given PID.
     If PID is omitted current process PID (os.getpid()) is used.
     Raise NoSuchProcess if PID does not exist.
@@ -399,10 +396,10 @@ class Process(object):
                 info["exitcode"] = self._exitcode
             if self._create_time:
                 info['started'] = _pprint_secs(self._create_time)
-            return "%s.%s(%s)" % (
+            return "{}.{}({})".format(
                 self.__class__.__module__,
                 self.__class__.__name__,
-                ", ".join(["%s=%r" % (k, v) for k, v in info.items()]))
+                ", ".join([f"{k}={v!r}" for k, v in info.items()]))
 
     __repr__ = __str__
 
@@ -513,7 +510,7 @@ class Process(object):
             attrs = set(attrs)
             invalid_names = attrs - valid_names
             if invalid_names:
-                raise ValueError("invalid attr name%s %s" % (
+                raise ValueError("invalid attr name{} {}".format(
                     "s" if len(invalid_names) > 1 else "",
                     ", ".join(map(repr, invalid_names))))
 
@@ -1095,8 +1092,9 @@ class Process(object):
         """
         valid_types = list(_psplatform.pfullmem._fields)
         if memtype not in valid_types:
-            raise ValueError("invalid memtype %r; valid types are %r" % (
-                memtype, tuple(valid_types)))
+            raise ValueError(
+                "invalid memtype {!r}; valid types are {!r}".format(
+                    memtype, tuple(valid_types)))
         fun = self.memory_info if memtype in _psplatform.pmem._fields else \
             self.memory_full_info
         metrics = fun()
@@ -1273,11 +1271,11 @@ class Process(object):
 
 
 # The valid attr names which can be processed by Process.as_dict().
-_as_dict_attrnames = set(
-    [x for x in dir(Process) if not x.startswith('_') and x not in
-     ['send_signal', 'suspend', 'resume', 'terminate', 'kill', 'wait',
-      'is_running', 'as_dict', 'parent', 'parents', 'children', 'rlimit',
-      'memory_info_ex', 'oneshot']])
+_as_dict_attrnames = {
+    x for x in dir(Process) if not x.startswith('_') and x not in [
+        'send_signal', 'suspend', 'resume', 'terminate', 'kill', 'wait',
+        'is_running', 'as_dict', 'parent', 'parents', 'children', 'rlimit',
+        'memory_info_ex', 'oneshot']}
 
 
 # =====================================================================
@@ -1359,7 +1357,7 @@ class Popen(Process):
     def wait(self, timeout=None):
         if self.__subproc.returncode is not None:
             return self.__subproc.returncode
-        ret = super(Popen, self).wait(timeout)
+        ret = super().wait(timeout)
         self.__subproc.returncode = ret
         return ret
 
@@ -2417,7 +2415,7 @@ def test():  # pragma: no cover
         print(line[:get_terminal_size()[0]])  # NOQA
 
 
-del memoize_when_activated, division
+del memoize_when_activated
 
 if __name__ == "__main__":
     test()

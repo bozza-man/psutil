@@ -457,7 +457,7 @@ def win_service_get(name):
     return service
 
 
-class WindowsService(object):
+class WindowsService:
     """Represents an installed Windows service."""
 
     def __init__(self, name, display_name):
@@ -465,12 +465,12 @@ class WindowsService(object):
         self._display_name = display_name
 
     def __str__(self):
-        details = "(name=%r, display_name=%r)" % (
+        details = "(name={!r}, display_name={!r})".format(
             self._name, self._display_name)
-        return "%s%s" % (self.__class__.__name__, details)
+        return f"{self.__class__.__name__}{details}"
 
     def __repr__(self):
-        return "<%s at %s>" % (self.__str__(), id(self))
+        return f"<{self.__str__()} at {id(self)}>"
 
     def __eq__(self, other):
         # Test for equality with another WindosService object based
@@ -674,7 +674,7 @@ def retry_error_partial_copy(fun):
         for _ in range(times):  # retries for roughly 1 second
             try:
                 return fun(self, *args, **kwargs)
-            except WindowsError as _:
+            except OSError as _:
                 err = _
                 if err.winerror == ERROR_PARTIAL_COPY:
                     time.sleep(delay)
@@ -689,7 +689,7 @@ def retry_error_partial_copy(fun):
     return wrapper
 
 
-class Process(object):
+class Process:
     """Wrapper class around underlying C implementation."""
 
     __slots__ = ["pid", "_name", "_ppid", "_cache"]
@@ -736,7 +736,7 @@ class Process(object):
         if PYPY:
             try:
                 exe = cext.proc_exe(self.pid)
-            except WindowsError as err:
+            except OSError as err:
                 # 24 = ERROR_TOO_MANY_OPEN_FILES. Not sure why this happens
                 # (perhaps PyPy's JIT delaying garbage collection of files?).
                 if err.errno == 24:

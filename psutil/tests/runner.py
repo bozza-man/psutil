@@ -20,7 +20,6 @@ Parallel:
 - make test-process ARGS=--parallel
 """
 
-from __future__ import print_function
 
 import atexit
 import optparse
@@ -107,7 +106,7 @@ class TestLoader:
         suite = unittest.TestSuite()
         if not os.path.isfile(FAILED_TESTS_FNAME):
             return suite
-        with open(FAILED_TESTS_FNAME, 'rt') as f:
+        with open(FAILED_TESTS_FNAME) as f:
             names = f.read().split()
         for n in names:
             test = unittest.defaultTestLoader.loadTestsFromName(n)
@@ -162,7 +161,7 @@ class ColouredTextRunner(unittest.TextTestRunner):
 
     def _write_last_failed(self):
         if self.failed_tnames:
-            with open(FAILED_TESTS_FNAME, 'wt') as f:
+            with open(FAILED_TESTS_FNAME, 'w') as f:
                 for tname in self.failed_tnames:
                     f.write(tname + '\n')
 
@@ -277,7 +276,7 @@ class ParallelRunner(ColouredTextRunner):
             +----------+----------+----------+----------+----------+----------+
             """ % (par.testsRun, par_fails, par_errs, par_skips, par_elapsed,
                    ser.testsRun, ser_fails, ser_errs, ser_skips, ser_elapsed)))
-        print("Ran %s tests in %.3fs using %s workers" % (
+        print("Ran {} tests in {:.3f}s using {} workers".format(
             par.testsRun + ser.testsRun, par_elapsed + ser_elapsed, NWORKERS))
         ok = par.wasSuccessful() and ser.wasSuccessful()
         self._exit(ok)

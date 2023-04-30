@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2009, Giampaolo Rodola'. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -170,7 +169,7 @@ class TestFSTestUtils(PsutilTestCase):
 
     def test_open_text(self):
         with open_text(__file__) as f:
-            self.assertEqual(f.mode, 'rt')
+            self.assertEqual(f.mode, 'r')
 
     def test_open_binary(self):
         with open_binary(__file__) as f:

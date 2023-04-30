@@ -423,7 +423,7 @@ class TestFetchAllProcesses(PsutilTestCase):
                     meth(value, info)
                 except AssertionError:
                     s = '\n' + '=' * 70 + '\n'
-                    s += "FAIL: test_%s pid=%s, ret=%s\n" % (
+                    s += "FAIL: test_{} pid={}, ret={}\n".format(
                         name, info['pid'], repr(value))
                     s += '-' * 70
                     s += "\n%s" % traceback.format_exc()

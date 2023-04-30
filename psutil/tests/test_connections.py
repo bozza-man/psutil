@@ -108,7 +108,7 @@ class TestUnconnectedSockets(ConnectionTestCase):
 
     def get_conn_from_sock(self, sock):
         cons = thisproc.connections(kind='all')
-        smap = dict([(c.fd, c) for c in cons])
+        smap = {c.fd: c for c in cons}
         if NETBSD or FREEBSD:
             # NetBSD opens a UNIX socket to /var/log/run
             # so there may be more connections.

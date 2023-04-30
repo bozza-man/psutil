@@ -117,9 +117,9 @@ class BSDTestCase(PsutilTestCase):
             self.assertEqual(usage.total, total)
             # 10 MB tolerance
             if abs(usage.free - free) > 10 * 1024 * 1024:
-                raise self.fail("psutil=%s, df=%s" % (usage.free, free))
+                raise self.fail(f"psutil={usage.free}, df={free}")
             if abs(usage.used - used) > 10 * 1024 * 1024:
-                raise self.fail("psutil=%s, df=%s" % (usage.used, used))
+                raise self.fail(f"psutil={usage.used}, df={used}")
 
     @unittest.skipIf(not which('sysctl'), "sysctl cmd not available")
     def test_cpu_count_logical(self):
@@ -172,7 +172,7 @@ class FreeBSDPsutilTestCase(PsutilTestCase):
             fields = line.split()
             _, start, stop, perms, res = fields[:5]
             map = maps.pop()
-            self.assertEqual("%s-%s" % (start, stop), map.addr)
+            self.assertEqual(f"{start}-{stop}", map.addr)
             self.assertEqual(int(res), map.rss)
             if not map.path.startswith('['):
                 self.assertEqual(fields[10], map.path)
@@ -422,8 +422,8 @@ class FreeBSDSystemTestCase(PsutilTestCase):
             return "%d:%02d" % (h, m)
 
         out = sh("acpiconf -i 0")
-        fields = dict([(x.split('\t')[0], x.split('\t')[-1])
-                       for x in out.split("\n")])
+        fields = {x.split('\t')[0]: x.split('\t')[-1]
+                  for x in out.split("\n")}
         metrics = psutil.sensors_battery()
         percent = int(fields['Remaining capacity:'].replace('%', ''))
         remaining_time = fields['Remaining time:']
@@ -503,7 +503,7 @@ class NetBSDTestCase(PsutilTestCase):
 
     @staticmethod
     def parse_meminfo(look_for):
-        with open('/proc/meminfo', 'rt') as f:
+        with open('/proc/meminfo') as f:
             for line in f:
                 if line.startswith(look_for):
                     return int(line.split()[1]) * 1024

@@ -20,7 +20,6 @@ the files which were modified in the commit. Checks:
 Install this with "make install-git-hooks".
 """
 
-from __future__ import print_function
 
 import os
 import shlex
@@ -29,7 +28,6 @@ import sys
 
 
 PYTHON = sys.executable
-PY3 = sys.version_info[0] == 3
 THIS_SCRIPT = os.path.realpath(__file__)
 
 
@@ -57,7 +55,7 @@ def hilite(s, ok=True, bold=False):
         attr.append('31')
     if bold:
         attr.append('1')
-    return '\x1b[%sm%s\x1b[0m' % (';'.join(attr), s)
+    return '\x1b[{}m{}\x1b[0m'.format(';'.join(attr), s)
 
 
 def exit(msg):
@@ -79,8 +77,7 @@ def sh(cmd):
 
 
 def open_text(path):
-    kw = {'encoding': 'utf8'} if PY3 else {}
-    return open(path, 'rt', **kw)
+    return open(path, 'rt', encoding='utf8')
 
 
 def git_commit_files():
@@ -106,7 +103,7 @@ def main():
         for lineno, line in enumerate(lines, 1):
             # space at end of line
             if line.endswith(' '):
-                print("%s:%s %r" % (path, lineno, line))
+                print(f"{path}:{lineno} {line!r}")
                 return sys.exit("space at end of line")
             line = line.rstrip()
             # # pdb (now provided by flake8-debugger plugin)
@@ -122,13 +119,15 @@ def main():
     if py_files:
         # flake8
         assert os.path.exists('.flake8')
-        cmd = "%s -m flake8 --config=.flake8 %s" % (PYTHON, " ".join(py_files))
+        cmd = "{} -m flake8 --config=.flake8 {}".format(
+            PYTHON, " ".join(py_files))
         ret = subprocess.call(shlex.split(cmd))
         if ret != 0:
-            return sys.exit("python code didn't pass 'flake8' style check; "
-                            "try running 'make fix-flake8'")
+            return sys.exit(
+                "python code didn't pass 'flake8' style check; "
+                "try running 'make fix-flake8'")
         # isort
-        cmd = "%s -m isort --check-only %s" % (
+        cmd = "{} -m isort --check-only {}".format(
             PYTHON, " ".join(py_files))
         ret = subprocess.call(shlex.split(cmd))
         if ret != 0:
@@ -137,7 +136,8 @@ def main():
     # C linter
     if c_files:
         # XXX: we should escape spaces and possibly other amenities here
-        cmd = "%s scripts/internal/clinter.py %s" % (PYTHON, " ".join(c_files))
+        cmd = "{} scripts/internal/clinter.py {}".format(
+            PYTHON, " ".join(c_files))
         ret = subprocess.call(cmd, shell=True)
         if ret != 0:
             return sys.exit("C code didn't pass style check")

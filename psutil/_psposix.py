@@ -50,7 +50,7 @@ def pid_exists(pid):
 # https://bugs.python.org/issue21076
 if hasattr(signal, "Signals"):
     Negsignal = enum.IntEnum(
-        'Negsignal', dict([(x.name, -x.value) for x in signal.Signals]))
+        'Negsignal', {x.name: -x.value for x in signal.Signals})
 
     def negsig_to_enum(num):
         """Convert a negative signal value to an enum."""

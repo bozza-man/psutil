@@ -117,7 +117,7 @@ def print_header(procs_status, num_procs):
     """Print system-related info, above the process list."""
 
     def get_dashes(perc):
-        dashes = "|" * int((float(perc) / 10 * 4))
+        dashes = "|" * int(float(perc) / 10 * 4)
         empty_dashes = " " * (40 - len(dashes))
         return dashes, empty_dashes
 
@@ -154,9 +154,9 @@ def print_header(procs_status, num_procs):
     st = []
     for x, y in procs_status.items():
         if y:
-            st.append("%s=%s" % (x, y))
+            st.append(f"{x}={y}")
     st.sort(key=lambda x: x[:3] in ('run', 'sle'), reverse=1)
-    printl(" Processes: %s (%s)" % (num_procs, ', '.join(st)))
+    printl(" Processes: {} ({})".format(num_procs, ', '.join(st)))
     # load average, uptime
     uptime = datetime.datetime.now() - \
         datetime.datetime.fromtimestamp(psutil.boot_time())
@@ -181,9 +181,9 @@ def refresh_window(procs, procs_status):
         # is expressed as: "mm:ss.ms"
         if p.dict['cpu_times'] is not None:
             ctime = datetime.timedelta(seconds=sum(p.dict['cpu_times']))
-            ctime = "%s:%s.%s" % (ctime.seconds // 60 % 60,
-                                  str((ctime.seconds % 60)).zfill(2),
-                                  str(ctime.microseconds)[:2])
+            ctime = "{}:{}.{}".format(ctime.seconds // 60 % 60,
+                                      str(ctime.seconds % 60).zfill(2),
+                                      str(ctime.microseconds)[:2])
         else:
             ctime = ''
         if p.dict['memory_percent'] is not None:

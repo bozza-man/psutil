@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: UTF-8 -*
 
 # Copyright (c) 2009, Giampaolo Rodola'. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -79,7 +78,7 @@ def wmic(path, what, converter=int):
     >>> wmic("Win32_OperatingSystem", "FreePhysicalMemory")
     2134124534
     """
-    out = sh("wmic path %s get %s" % (path, what)).strip()
+    out = sh(f"wmic path {path} get {what}").strip()
     data = "".join(out.splitlines()[1:]).strip()  # get rid of the header
     if converter is not None:
         if "," in what:
@@ -196,7 +195,7 @@ class TestSystemAPIs(WindowsTestCase):
         # Note: this test might fail if the OS is starting/killing
         # other processes in the meantime
         w = wmi.WMI().Win32_Process()
-        wmi_pids = set([x.ProcessId for x in w])
+        wmi_pids = {x.ProcessId for x in w}
         psutil_pids = set(psutil.pids())
         self.assertEqual(wmi_pids, psutil_pids)
 
@@ -224,7 +223,7 @@ class TestSystemAPIs(WindowsTestCase):
                     self.assertEqual(usage.free, wmi_free)
                     # 10 MB tolerance
                     if abs(usage.free - wmi_free) > 10 * 1024 * 1024:
-                        raise self.fail("psutil=%s, wmi=%s" % (
+                        raise self.fail("psutil={}, wmi={}".format(
                             usage.free, wmi_free))
                     break
             else:
@@ -260,7 +259,7 @@ class TestSystemAPIs(WindowsTestCase):
             wmi_names.add(wmi_adapter.Name)
             wmi_names.add(wmi_adapter.NetConnectionID)
         self.assertTrue(ps_names & wmi_names,
-                        "no common entries in %s, %s" % (ps_names, wmi_names))
+                        f"no common entries in {ps_names}, {wmi_names}")
 
     def test_boot_time(self):
         wmi_os = wmi.WMI().Win32_OperatingSystem()
@@ -583,7 +582,7 @@ class TestProcessWMI(WindowsTestCase):
         w = wmi.WMI().Win32_Process(ProcessId=self.pid)[0]
         p = psutil.Process(self.pid)
         domain, _, username = w.GetOwner()
-        username = "%s\\%s" % (domain, username)
+        username = f"{domain}\\{username}"
         self.assertEqual(p.username(), username)
 
     @retry_on_failure()
@@ -604,7 +603,7 @@ class TestProcessWMI(WindowsTestCase):
         # returned instead.
         wmi_usage = int(w.PageFileUsage)
         if (vms != wmi_usage) and (vms != wmi_usage * 1024):
-            raise self.fail("wmi=%s, psutil=%s" % (wmi_usage, vms))
+            raise self.fail(f"wmi={wmi_usage}, psutil={vms}")
 
     def test_create_time(self):
         w = wmi.WMI().Win32_Process(ProcessId=self.pid)[0]
@@ -797,7 +796,7 @@ class RemoteProcessTestCase(PsutilTestCase):
 class TestServices(PsutilTestCase):
 
     def test_win_service_iter(self):
-        valid_statuses = set([
+        valid_statuses = {
             "running",
             "paused",
             "start",
@@ -805,13 +804,13 @@ class TestServices(PsutilTestCase):
             "continue",
             "stop",
             "stopped",
-        ])
-        valid_start_types = set([
+        }
+        valid_start_types = {
             "automatic",
             "manual",
             "disabled",
-        ])
-        valid_statuses = set([
+        }
+        valid_statuses = {
             "running",
             "paused",
             "start_pending",
@@ -819,7 +818,7 @@ class TestServices(PsutilTestCase):
             "continue_pending",
             "stop_pending",
             "stopped"
-        ])
+        }
         for serv in psutil.win_service_iter():
             data = serv.as_dict()
             self.assertIsInstance(data['name'], str)

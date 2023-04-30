@@ -225,7 +225,7 @@ def disk_partitions(all=False):
                     continue
             except OSError as err:
                 # https://github.com/giampaolo/psutil/issues/1674
-                debug("skipping %r: %s" % (mountpoint, err))
+                debug(f"skipping {mountpoint!r}: {err}")
                 continue
         maxfile = maxpath = None  # set later
         ntuple = _common.sdiskpart(device, mountpoint, fstype, opts,
@@ -364,7 +364,7 @@ def wrap_exceptions(fun):
     return wrapper
 
 
-class Process(object):
+class Process:
     """Wrapper class around underlying C implementation."""
 
     __slots__ = ["pid", "_name", "_ppid", "_procfs_path", "_cache"]
@@ -379,7 +379,7 @@ class Process(object):
         """Raise NSP if the process disappeared on us."""
         # For those C function who do not raise NSP, possibly returning
         # incorrect or incomplete result.
-        os.stat('%s/%s' % (self._procfs_path, self.pid))
+        os.stat(f'{self._procfs_path}/{self.pid}')
 
     def oneshot_enter(self):
         self._proc_name_and_args.cache_activate(self)
@@ -400,7 +400,7 @@ class Process(object):
     @memoize_when_activated
     def _proc_basic_info(self):
         if self.pid == 0 and not \
-                os.path.exists('%s/%s/psinfo' % (self._procfs_path, self.pid)):
+                os.path.exists(f'{self._procfs_path}/{self.pid}/psinfo'):
             raise AccessDenied(self.pid)
         ret = cext.proc_basic_info(self.pid, self._procfs_path)
         assert len(ret) == len(proc_info_map)
@@ -420,7 +420,7 @@ class Process(object):
     def exe(self):
         try:
             return os.readlink(
-                "%s/%s/path/a.out" % (self._procfs_path, self.pid))
+                f"{self._procfs_path}/{self.pid}/path/a.out")
         except OSError:
             pass    # continue and guess the exe name from the cmdline
         # Will be guessed later from cmdline but we want to explicitly
@@ -534,9 +534,9 @@ class Process(object):
         # Reference: http://goo.gl/55XgO
         procfs_path = self._procfs_path
         try:
-            return os.readlink("%s/%s/path/cwd" % (procfs_path, self.pid))
+            return os.readlink(f"{procfs_path}/{self.pid}/path/cwd")
         except FileNotFoundError:
-            os.stat("%s/%s" % (procfs_path, self.pid))  # raise NSP or AD
+            os.stat(f"{procfs_path}/{self.pid}")  # raise NSP or AD
             return ""
 
     @wrap_exceptions
@@ -565,7 +565,7 @@ class Process(object):
             try:
                 utime, stime = cext.query_process_thread(
                     self.pid, tid, procfs_path)
-            except EnvironmentError as err:
+            except OSError as err:
                 if err.errno == errno.EOVERFLOW and not IS_64_BIT:
                     # We may get here if we attempt to query a 64bit process
                     # with a 32bit python.
@@ -616,14 +616,14 @@ class Process(object):
         p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
-        stdout, stderr = [x.decode(sys.stdout.encoding)
-                          for x in (stdout, stderr)]
+        stdout, stderr = (x.decode(sys.stdout.encoding)
+                          for x in (stdout, stderr))
         if p.returncode != 0:
             if 'permission denied' in stderr.lower():
                 raise AccessDenied(self.pid, self._name)
             if 'no such process' in stderr.lower():
                 raise NoSuchProcess(self.pid, self._name)
-            raise RuntimeError("%r command error\n%s" % (cmd, stderr))
+            raise RuntimeError(f"{cmd!r} command error\n{stderr}")
 
         lines = stdout.split('\n')[2:]
         for i, line in enumerate(lines):
@@ -649,7 +649,7 @@ class Process(object):
         # is no longer there.
         if not ret:
             # will raise NSP if process is gone
-            os.stat('%s/%s' % (self._procfs_path, self.pid))
+            os.stat(f'{self._procfs_path}/{self.pid}')
 
         # UNIX sockets
         if kind in ('all', 'unix'):
@@ -663,8 +663,8 @@ class Process(object):
     @wrap_exceptions
     def memory_maps(self):
         def toaddr(start, end):
-            return '%s-%s' % (hex(start)[2:].strip('L'),
-                              hex(end)[2:].strip('L'))
+            return '{}-{}'.format(
+                hex(start)[2:].strip('L'), hex(end)[2:].strip('L'))
 
         procfs_path = self._procfs_path
         retlist = []
@@ -689,7 +689,7 @@ class Process(object):
             if not name.startswith('['):
                 try:
                     name = os.readlink(
-                        '%s/%s/path/%s' % (procfs_path, self.pid, name))
+                        f'{procfs_path}/{self.pid}/path/{name}')
                 except OSError as err:
                     if err.errno == errno.ENOENT:
                         # sometimes the link may not be resolved by
@@ -698,7 +698,7 @@ class Process(object):
                         # unresolved link path.
                         # This seems an incosistency with /proc similar
                         # to: http://goo.gl/55XgO
-                        name = '%s/%s/path/%s' % (procfs_path, self.pid, name)
+                        name = f'{procfs_path}/{self.pid}/path/{name}'
                         hit_enoent = True
                     else:
                         raise
@@ -709,7 +709,7 @@ class Process(object):
 
     @wrap_exceptions
     def num_fds(self):
-        return len(os.listdir("%s/%s/fd" % (self._procfs_path, self.pid)))
+        return len(os.listdir(f"{self._procfs_path}/{self.pid}/fd"))
 
     @wrap_exceptions
     def num_ctx_switches(self):

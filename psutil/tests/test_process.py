@@ -260,10 +260,10 @@ class TestProcess(PsutilTestCase):
         # using a tolerance  of +/- 0.1 seconds.
         # It will fail if the difference between the values is > 0.1s.
         if (max([user_time, utime]) - min([user_time, utime])) > 0.1:
-            raise self.fail("expected: %s, found: %s" % (utime, user_time))
+            raise self.fail(f"expected: {utime}, found: {user_time}")
 
         if (max([kernel_time, ktime]) - min([kernel_time, ktime])) > 0.1:
-            raise self.fail("expected: %s, found: %s" % (ktime, kernel_time))
+            raise self.fail(f"expected: {ktime}, found: {kernel_time}")
 
     @unittest.skipIf(not HAS_PROC_CPU_NUM, "not supported")
     def test_cpu_num(self):
@@ -689,7 +689,7 @@ class TestProcess(PsutilTestCase):
                 # "/usr/local/bin/python"
                 # We do not want to consider this difference in accuracy
                 # an error.
-                ver = "%s.%s" % (sys.version_info[0], sys.version_info[1])
+                ver = f"{sys.version_info[0]}.{sys.version_info[1]}"
                 try:
                     self.assertEqual(exe.replace(ver, ''),
                                      PYTHON_EXE.replace(ver, ''))
@@ -1430,10 +1430,10 @@ class TestProcess(PsutilTestCase):
                 d.pop("__CF_USER_TEXT_ENCODING", None)
                 d.pop("VERSIONER_PYTHON_PREFER_32_BIT", None)
                 d.pop("VERSIONER_PYTHON_VERSION", None)
-            return dict(
-                [(k.replace("\r", "").replace("\n", ""),
-                  v.replace("\r", "").replace("\n", ""))
-                 for k, v in d.items()])
+            return {
+                k.replace("\r", "").replace("\n", ""):
+                    v.replace("\r", "").replace("\n", "")
+                for k, v in d.items()}
 
         self.maxDiff = None
         p = psutil.Process()

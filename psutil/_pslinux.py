@@ -4,7 +4,6 @@
 
 """Linux platform implementation."""
 
-from __future__ import division
 
 import base64
 import collections
@@ -327,7 +326,7 @@ def calculate_avail_vmem(mems):
         return fallback
     try:
         f = open_binary('%s/zoneinfo' % get_procfs_path())
-    except IOError:
+    except OSError:
         return fallback  # kernel 2.6.13
 
     watermark_low = 0
@@ -457,7 +456,7 @@ def virtual_memory():
 
     # Warn about missing metrics which are set to 0.
     if missing_fields:
-        msg = "%s memory stats couldn't be determined and %s set to 0" % (
+        msg = "{} memory stats couldn't be determined and {} set to 0".format(
             ", ".join(missing_fields),
             "was" if len(missing_fields) == 1 else "were")
         warnings.warn(msg, RuntimeWarning, stacklevel=2)
@@ -490,7 +489,7 @@ def swap_memory():
     # get pgin/pgouts
     try:
         f = open_binary("%s/vmstat" % get_procfs_path())
-    except IOError as err:
+    except OSError as err:
         # see https://github.com/giampaolo/psutil/issues/722
         msg = "'sin' and 'sout' swap memory stats couldn't " \
               "be determined and were set to 0 (%s)" % str(err)
@@ -754,9 +753,9 @@ class Connections:
 
     def get_proc_inodes(self, pid):
         inodes = defaultdict(list)
-        for fd in os.listdir("%s/%s/fd" % (self._procfs_path, pid)):
+        for fd in os.listdir(f"{self._procfs_path}/{pid}/fd"):
             try:
-                inode = readlink("%s/%s/fd/%s" % (self._procfs_path, pid, fd))
+                inode = readlink(f"{self._procfs_path}/{pid}/fd/{fd}")
             except (FileNotFoundError, ProcessLookupError):
                 # ENOENT == file which is gone in the meantime;
                 # os.stat('/proc/%s' % self.pid) will be done later
@@ -858,8 +857,8 @@ class Connections:
                         line.split()[:10]
                 except ValueError:
                     raise RuntimeError(
-                        "error while parsing %s; malformed line %s %r" % (
-                            file, lineno, line))
+                        f"error while parsing {file}; "
+                        f"malformed line {lineno} {line!r}")
                 if inode in inodes:
                     # # We assume inet sockets are unique, so we error
                     # # out if there are multiple references to the
@@ -898,7 +897,7 @@ class Connections:
                         # see: https://github.com/giampaolo/psutil/issues/766
                         continue
                     raise RuntimeError(
-                        "error while parsing %s; malformed line %r" % (
+                        "error while parsing {}; malformed line {!r}".format(
                             file, line))
                 if inode in inodes:
                     # With UNIX sockets we can have a single inode
@@ -936,7 +935,7 @@ class Connections:
             inodes = self.get_all_inodes()
         ret = set()
         for proto_name, family, type_ in self.tmap[kind]:
-            path = "%s/net/%s" % (self._procfs_path, proto_name)
+            path = f"{self._procfs_path}/net/{proto_name}"
             if family in (socket.AF_INET, socket.AF_INET6):
                 ls = self.process_inet(
                     path, family, type_, inodes, filter_pid=pid)
@@ -1156,7 +1155,7 @@ class RootFsDeviceFinder:
                         return "/dev/%s" % name
 
     def ask_sys_dev_block(self):
-        path = "/sys/dev/block/%s:%s/uevent" % (self.major, self.minor)
+        path = f"/sys/dev/block/{self.major}:{self.minor}/uevent"
         with open_text(path) as f:
             for line in f:
                 if line.startswith("DEVNAME="):
@@ -1165,7 +1164,7 @@ class RootFsDeviceFinder:
                         return "/dev/%s" % name
 
     def ask_sys_class_block(self):
-        needle = "%s:%s" % (self.major, self.minor)
+        needle = f"{self.major}:{self.minor}"
         files = glob.iglob("/sys/class/block/*/dev")
         for file in files:
             try:
@@ -1184,17 +1183,17 @@ class RootFsDeviceFinder:
         if path is None:
             try:
                 path = self.ask_proc_partitions()
-            except (IOError, OSError) as err:
+            except OSError as err:
                 debug(err)
         if path is None:
             try:
                 path = self.ask_sys_dev_block()
-            except (IOError, OSError) as err:
+            except OSError as err:
                 debug(err)
         if path is None:
             try:
                 path = self.ask_sys_class_block()
-            except (IOError, OSError) as err:
+            except OSError as err:
                 debug(err)
         # We use exists() because the "/dev/*" part of the path is hard
         # coded, so we want to be sure.
@@ -1267,7 +1266,7 @@ def sensors_temperatures():
     # https://github.com/giampaolo/psutil/issues/971
     # https://github.com/nicolargo/glances/issues/1060
     basenames.extend(glob.glob('/sys/class/hwmon/hwmon*/device/temp*_*'))
-    basenames = sorted(set([x.split('_')[0] for x in basenames]))
+    basenames = sorted({x.split('_')[0] for x in basenames})
 
     # Only add the coretemp hwmon entries if they're not already in
     # /sys/class/hwmon/
@@ -1287,7 +1286,7 @@ def sensors_temperatures():
             current = float(bcat(path)) / 1000.0
             path = os.path.join(os.path.dirname(base), 'name')
             unit_name = cat(path).strip()
-        except (IOError, OSError, ValueError):
+        except (OSError, ValueError):
             # A lot of things can go wrong here, so let's just skip the
             # whole entry. Sure thing is Linux's /sys/class/hwmon really
             # is a stinky broken mess.
@@ -1326,13 +1325,13 @@ def sensors_temperatures():
                 current = float(bcat(path)) / 1000.0
                 path = os.path.join(base, 'type')
                 unit_name = cat(path).strip()
-            except (IOError, OSError, ValueError) as err:
+            except (OSError, ValueError) as err:
                 debug(err)
                 continue
 
             trip_paths = glob.glob(base + '/trip_point*')
-            trip_points = set(['_'.join(
-                os.path.basename(p).split('_')[0:3]) for p in trip_paths])
+            trip_points = {'_'.join(
+                os.path.basename(p).split('_')[0:3]) for p in trip_paths}
             critical = None
             high = None
             for trip_point in trip_points:
@@ -1378,11 +1377,11 @@ def sensors_fans():
         # https://github.com/giampaolo/psutil/issues/971
         basenames = glob.glob('/sys/class/hwmon/hwmon*/device/fan*_*')
 
-    basenames = sorted(set([x.split('_')[0] for x in basenames]))
+    basenames = sorted({x.split('_')[0] for x in basenames})
     for base in basenames:
         try:
             current = int(bcat(base + '_input'))
-        except (IOError, OSError) as err:
+        except OSError as err:
             debug(err)
             continue
         unit_name = cat(os.path.join(os.path.dirname(base), 'name')).strip()
@@ -1551,7 +1550,7 @@ def pid_exists(pid):
             # Note: already checked that this is faster than using a
             # regular expr. Also (a lot) faster than doing
             # 'return pid in pids()'
-            path = "%s/%s/status" % (get_procfs_path(), pid)
+            path = f"{get_procfs_path()}/{pid}/status"
             with open_binary(path) as f:
                 for line in f:
                     if line.startswith(b"Tgid:"):
@@ -1560,7 +1559,7 @@ def pid_exists(pid):
                         # dealing with a process PID.
                         return tgid == pid
                 raise ValueError("'Tgid' line not found in %s" % path)
-        except (EnvironmentError, ValueError):
+        except (OSError, ValueError):
             return pid in pids()
 
 
@@ -1572,7 +1571,7 @@ def ppid_map():
     procfs_path = get_procfs_path()
     for pid in pids():
         try:
-            with open_binary("%s/%s/stat" % (procfs_path, pid)) as f:
+            with open_binary(f"{procfs_path}/{pid}/stat") as f:
                 data = f.read()
         except (FileNotFoundError, ProcessLookupError):
             # Note: we should be able to access /stat for all processes
@@ -1599,7 +1598,7 @@ def wrap_exceptions(fun):
         except ProcessLookupError:
             raise NoSuchProcess(self.pid, self._name)
         except FileNotFoundError:
-            if not os.path.exists("%s/%s" % (self._procfs_path, self.pid)):
+            if not os.path.exists(f"{self._procfs_path}/{self.pid}"):
                 raise NoSuchProcess(self.pid, self._name)
             # Note: zombies will keep existing under /proc until they're
             # gone so there's no way to distinguish them in here.
@@ -1607,7 +1606,7 @@ def wrap_exceptions(fun):
     return wrapper
 
 
-class Process(object):
+class Process:
     """Linux process implementation."""
 
     __slots__ = ["pid", "_name", "_ppid", "_procfs_path", "_cache"]
@@ -1622,7 +1621,7 @@ class Process(object):
         """Raise NSP if the process disappeared on us."""
         # For those C function who do not raise NSP, possibly returning
         # incorrect or incomplete result.
-        os.stat('%s/%s' % (self._procfs_path, self.pid))
+        os.stat(f'{self._procfs_path}/{self.pid}')
 
     @wrap_exceptions
     @memoize_when_activated
@@ -1635,7 +1634,7 @@ class Process(object):
         The return value is cached in case oneshot() ctx manager is
         in use.
         """
-        data = bcat("%s/%s/stat" % (self._procfs_path, self.pid))
+        data = bcat(f"{self._procfs_path}/{self.pid}/stat")
         # Process name is between parentheses. It can contain spaces and
         # other parentheses. This is taken into account by looking for
         # the first occurrence of "(" and the last occurrence of ")".
@@ -1665,13 +1664,13 @@ class Process(object):
         The return value is cached in case oneshot() ctx manager is
         in use.
         """
-        with open_binary("%s/%s/status" % (self._procfs_path, self.pid)) as f:
+        with open_binary(f"{self._procfs_path}/{self.pid}/status") as f:
             return f.read()
 
     @wrap_exceptions
     @memoize_when_activated
     def _read_smaps_file(self):
-        with open_binary("%s/%s/smaps" % (self._procfs_path, self.pid)) as f:
+        with open_binary(f"{self._procfs_path}/{self.pid}/smaps") as f:
             return f.read().strip()
 
     def oneshot_enter(self):
@@ -1692,12 +1691,12 @@ class Process(object):
 
     def exe(self):
         try:
-            return readlink("%s/%s/exe" % (self._procfs_path, self.pid))
+            return readlink(f"{self._procfs_path}/{self.pid}/exe")
         except (FileNotFoundError, ProcessLookupError):
             # no such file error; might be raised also if the
             # path actually exists for system processes with
             # low pids (about 0-20)
-            if os.path.lexists("%s/%s" % (self._procfs_path, self.pid)):
+            if os.path.lexists(f"{self._procfs_path}/{self.pid}"):
                 return ""
             else:
                 if not pid_exists(self.pid):
@@ -1709,7 +1708,7 @@ class Process(object):
 
     @wrap_exceptions
     def cmdline(self):
-        with open_text("%s/%s/cmdline" % (self._procfs_path, self.pid)) as f:
+        with open_text(f"{self._procfs_path}/{self.pid}/cmdline") as f:
             data = f.read()
         if not data:
             # may happen in case of zombie process
@@ -1734,7 +1733,7 @@ class Process(object):
 
     @wrap_exceptions
     def environ(self):
-        with open_text("%s/%s/environ" % (self._procfs_path, self.pid)) as f:
+        with open_text(f"{self._procfs_path}/{self.pid}/environ") as f:
             data = f.read()
         return parse_environ_block(data)
 
@@ -1751,7 +1750,7 @@ class Process(object):
     if os.path.exists('/proc/%s/io' % os.getpid()):
         @wrap_exceptions
         def io_counters(self):
-            fname = "%s/%s/io" % (self._procfs_path, self.pid)
+            fname = f"{self._procfs_path}/{self.pid}/io"
             fields = {}
             with open_binary(fname) as f:
                 for line in f:
@@ -1823,9 +1822,9 @@ class Process(object):
         # | data   | data + stack                        | drs  | DATA |
         # | dirty  | dirty pages (unused in Linux 2.6)   | dt   |      |
         #  ============================================================
-        with open_binary("%s/%s/statm" % (self._procfs_path, self.pid)) as f:
+        with open_binary(f"{self._procfs_path}/{self.pid}/statm") as f:
             vms, rss, shared, text, lib, data, dirty = \
-                [int(x) * PAGESIZE for x in f.readline().split()[:7]]
+                (int(x) * PAGESIZE for x in f.readline().split()[:7])
         return pmem(rss, vms, shared, text, lib, data, dirty)
 
     if HAS_PROC_SMAPS_ROLLUP or HAS_PROC_SMAPS:
@@ -1967,7 +1966,7 @@ class Process(object):
     @wrap_exceptions
     def cwd(self):
         try:
-            return readlink("%s/%s/cwd" % (self._procfs_path, self.pid))
+            return readlink(f"{self._procfs_path}/{self.pid}/cwd")
         except (FileNotFoundError, ProcessLookupError):
             # https://github.com/giampaolo/psutil/issues/986
             if not pid_exists(self.pid):
@@ -1999,12 +1998,12 @@ class Process(object):
 
     @wrap_exceptions
     def threads(self):
-        thread_ids = os.listdir("%s/%s/task" % (self._procfs_path, self.pid))
+        thread_ids = os.listdir(f"{self._procfs_path}/{self.pid}/task")
         thread_ids.sort()
         retlist = []
         hit_enoent = False
         for thread_id in thread_ids:
-            fname = "%s/%s/task/%s/stat" % (
+            fname = "{}/{}/task/{}/stat".format(
                 self._procfs_path, self.pid, thread_id)
             try:
                 with open_binary(fname) as f:
@@ -2066,12 +2065,12 @@ class Process(object):
                     for cpu in cpus:
                         if cpu not in all_cpus:
                             raise ValueError(
-                                "invalid CPU number %r; choose between %s" % (
-                                    cpu, eligible_cpus))
+                                f"invalid CPU number {cpu!r}; "
+                                f"choose between {eligible_cpus}")
                         if cpu not in eligible_cpus:
                             raise ValueError(
-                                "CPU number %r is not eligible; choose "
-                                "between %s" % (cpu, eligible_cpus))
+                                f"CPU number {cpu!r} is not eligible; "
+                                f"choose between {eligible_cpus}")
                 raise
 
     # only starting from kernel 2.6.13
@@ -2132,10 +2131,10 @@ class Process(object):
     @wrap_exceptions
     def open_files(self):
         retlist = []
-        files = os.listdir("%s/%s/fd" % (self._procfs_path, self.pid))
+        files = os.listdir(f"{self._procfs_path}/{self.pid}/fd")
         hit_enoent = False
         for fd in files:
-            file = "%s/%s/fd/%s" % (self._procfs_path, self.pid, fd)
+            file = f"{self._procfs_path}/{self.pid}/fd/{fd}"
             try:
                 path = readlink(file)
             except (FileNotFoundError, ProcessLookupError):
@@ -2158,7 +2157,7 @@ class Process(object):
                 # absolute path though.
                 if path.startswith('/') and isfile_strict(path):
                     # Get file position and flags.
-                    file = "%s/%s/fdinfo/%s" % (
+                    file = "{}/{}/fdinfo/{}".format(
                         self._procfs_path, self.pid, fd)
                     try:
                         with open_binary(file) as f:
@@ -2185,7 +2184,7 @@ class Process(object):
 
     @wrap_exceptions
     def num_fds(self):
-        return len(os.listdir("%s/%s/fd" % (self._procfs_path, self.pid)))
+        return len(os.listdir(f"{self._procfs_path}/{self.pid}/fd"))
 
     @wrap_exceptions
     def ppid(self):

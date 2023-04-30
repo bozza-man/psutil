@@ -39,7 +39,6 @@ Using [1] with some modifications for including ftp
 Author: Himanshu Shekhar <https://github.com/himanshub16> (2017)
 """
 
-from __future__ import print_function
 
 import argparse
 import concurrent.futures
@@ -92,7 +91,7 @@ def sanitize_url(url):
 
 def find_urls(s):
     matches = REGEX.findall(s) or []
-    return list(set([sanitize_url(x) for x in matches]))
+    return list({sanitize_url(x) for x in matches})
 
 
 def parse_rst(fname):
@@ -161,7 +160,7 @@ def parse_c(fname):
 
 
 def parse_generic(fname):
-    with open(fname, 'rt', errors='ignore') as f:
+    with open(fname, errors='ignore') as f:
         text = f.read()
     return find_urls(text)
 
@@ -175,7 +174,7 @@ def get_urls(fname):
     elif fname.endswith('.c') or fname.endswith('.h'):
         return parse_c(fname)
     else:
-        with open(fname, 'rt', errors='ignore') as f:
+        with open(fname, errors='ignore') as f:
             if f.readline().strip().startswith('#!/usr/bin/env python3'):
                 return parse_py(fname)
         return parse_generic(fname)
@@ -209,7 +208,7 @@ def parallel_validator(urls):
                       for url in urls}
         for fut in concurrent.futures.as_completed(fut_to_url):
             current += 1
-            sys.stdout.write("\r%s / %s" % (current, total))
+            sys.stdout.write(f"\r{current} / {total}")
             sys.stdout.flush()
             fname, url = fut_to_url[fut]
             try:

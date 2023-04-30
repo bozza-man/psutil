@@ -6,7 +6,6 @@
 
 """Linux specific tests."""
 
-from __future__ import division
 
 import collections
 import contextlib
@@ -106,7 +105,7 @@ def get_ipv4_broadcast(ifname):
 
 
 def get_ipv6_addresses(ifname):
-    with open("/proc/net/if_inet6", 'rt') as f:
+    with open("/proc/net/if_inet6") as f:
         all_fields = []
         for line in f.readlines():
             fields = line.split()
@@ -166,7 +165,7 @@ def free_physmem():
     for line in lines:
         if line.startswith('Mem'):
             total, used, free, shared = \
-                [int(x) for x in line.split()[1:5]]
+                (int(x) for x in line.split()[1:5])
             nt = collections.namedtuple(
                 'free', 'total used free shared output')
             return nt(total, used, free, shared, out)
@@ -267,7 +266,7 @@ class TestSystemVirtualMemoryAgainstFree(PsutilTestCase):
         psutil_value = psutil.virtual_memory().shared
         self.assertAlmostEqual(
             free_value, psutil_value, delta=TOLERANCE_SYS_MEM,
-            msg='%s %s \n%s' % (free_value, psutil_value, free.output))
+            msg=f'{free_value} {psutil_value} \n{free.output}')
 
     @retry_on_failure()
     def test_available(self):
@@ -282,7 +281,7 @@ class TestSystemVirtualMemoryAgainstFree(PsutilTestCase):
             psutil_value = psutil.virtual_memory().available
             self.assertAlmostEqual(
                 free_value, psutil_value, delta=TOLERANCE_SYS_MEM,
-                msg='%s %s \n%s' % (free_value, psutil_value, out))
+                msg=f'{free_value} {psutil_value} \n{out}')
 
 
 @unittest.skipIf(not LINUX, "LINUX only")
@@ -884,7 +883,7 @@ class TestSystemCPUFrequency(PsutilTestCase):
         # See: https://github.com/giampaolo/psutil/issues/1071
         def open_mock(name, *args, **kwargs):
             if name.endswith('/scaling_cur_freq'):
-                raise IOError(errno.ENOENT, "")
+                raise OSError(errno.ENOENT, "")
             elif name.endswith('/cpuinfo_cur_freq'):
                 return io.BytesIO(b"200000")
             elif name == '/proc/cpuinfo':
@@ -921,7 +920,7 @@ class TestLoadAvg(PsutilTestCase):
     @unittest.skipIf(not HAS_GETLOADAVG, "not supported")
     def test_getloadavg(self):
         psutil_value = psutil.getloadavg()
-        with open("/proc/loadavg", "r") as f:
+        with open("/proc/loadavg") as f:
             proc_value = f.read().split()
 
         self.assertAlmostEqual(float(proc_value[0]), psutil_value[0], delta=1)
@@ -993,7 +992,7 @@ class TestSystemNetIfStats(PsutilTestCase):
 
     def test_mtu(self):
         for name, stats in psutil.net_if_stats().items():
-            with open("/sys/class/net/%s/mtu" % name, "rt") as f:
+            with open("/sys/class/net/%s/mtu" % name) as f:
                 self.assertEqual(stats.mtu, int(f.read().strip()))
 
     @unittest.skipIf(not which("ifconfig"), "ifconfig utility not available")
@@ -1085,7 +1084,7 @@ class TestSystemNetConnections(PsutilTestCase):
             s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
             self.addCleanup(s.close)
             s.bind(("::1", 0))
-        except socket.error:
+        except OSError:
             pass
         psutil.net_connections(kind='inet6')
 
@@ -1137,7 +1136,7 @@ class TestSystemDiskPartitions(PsutilTestCase):
 
     def test_zfs_fs(self):
         # Test that ZFS partitions are returned.
-        with open("/proc/filesystems", "r") as f:
+        with open("/proc/filesystems") as f:
             data = f.read()
         if 'zfs' in data:
             for part in psutil.disk_partitions():
@@ -1321,7 +1320,7 @@ class TestRootFsDeviceFinder(PsutilTestCase):
             finder.ask_proc_partitions()
         else:
             self.assertRaises(FileNotFoundError, finder.ask_proc_partitions)
-        if os.path.exists("/sys/dev/block/%s:%s/uevent" % (
+        if os.path.exists("/sys/dev/block/{}:{}/uevent".format(
                 self.major, self.minor)):
             finder.ask_sys_dev_block()
         else:
@@ -1336,7 +1335,7 @@ class TestRootFsDeviceFinder(PsutilTestCase):
         a = b = c = None
         if os.path.exists("/proc/partitions"):
             a = finder.ask_proc_partitions()
-        if os.path.exists("/sys/dev/block/%s:%s/uevent" % (
+        if os.path.exists("/sys/dev/block/{}:{}/uevent".format(
                 self.major, self.minor)):
             b = finder.ask_sys_class_block()
         c = finder.ask_sys_dev_block()
@@ -1396,7 +1395,7 @@ class TestMisc(PsutilTestCase):
 
             def open_mock(name, *args, **kwargs):
                 if name.startswith('/proc'):
-                    raise IOError(errno.ENOENT, 'rejecting access for test')
+                    raise OSError(errno.ENOENT, 'rejecting access for test')
                 return orig_open(name, *args, **kwargs)
 
             with mock.patch('builtins.open', side_effect=open_mock):
@@ -1591,7 +1590,7 @@ class TestSensorsBattery(PsutilTestCase):
         # case code relies on /status file.
         def open_mock(name, *args, **kwargs):
             if name.endswith("AC0/online") or name.endswith("AC/online"):
-                raise IOError(errno.ENOENT, "")
+                raise OSError(errno.ENOENT, "")
             elif name.endswith("/status"):
                 return io.StringIO("charging")
             else:
@@ -1620,7 +1619,7 @@ class TestSensorsBattery(PsutilTestCase):
         # case code relies on /status file.
         def open_mock(name, *args, **kwargs):
             if name.endswith("AC0/online") or name.endswith("AC/online"):
-                raise IOError(errno.ENOENT, "")
+                raise OSError(errno.ENOENT, "")
             elif name.endswith("/status"):
                 return io.StringIO("discharging")
             else:
@@ -1637,7 +1636,7 @@ class TestSensorsBattery(PsutilTestCase):
         def open_mock(name, *args, **kwargs):
             if name.startswith("/sys/class/power_supply/AC0/online") or \
                     name.startswith("/sys/class/power_supply/AC/online"):
-                raise IOError(errno.ENOENT, "")
+                raise OSError(errno.ENOENT, "")
             elif name.startswith("/sys/class/power_supply/BAT0/status"):
                 return io.BytesIO(b"???")
             else:
@@ -1864,7 +1863,7 @@ class TestProcess(PsutilTestCase):
         testfn = self.get_testfn()
         with open(testfn, "w"):
             self.assertEqual(get_test_file(testfn).mode, "w")
-        with open(testfn, "r"):
+        with open(testfn):
             self.assertEqual(get_test_file(testfn).mode, "r")
         with open(testfn, "a"):
             self.assertEqual(get_test_file(testfn).mode, "a")
@@ -2002,7 +2001,7 @@ class TestProcess(PsutilTestCase):
         # of raising NSP.
         def open_mock_1(name, *args, **kwargs):
             if name.startswith('/proc/%s/task' % os.getpid()):
-                raise IOError(errno.ENOENT, "")
+                raise OSError(errno.ENOENT, "")
             else:
                 return orig_open(name, *args, **kwargs)
 
@@ -2016,7 +2015,7 @@ class TestProcess(PsutilTestCase):
         # exception.
         def open_mock_2(name, *args, **kwargs):
             if name.startswith('/proc/%s/task' % os.getpid()):
-                raise IOError(errno.EPERM, "")
+                raise OSError(errno.EPERM, "")
             else:
                 return orig_open(name, *args, **kwargs)
 

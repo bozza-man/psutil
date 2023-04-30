@@ -144,10 +144,10 @@ def cpu_count_cores():
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
-    stdout, stderr = [x.decode(sys.stdout.encoding)
-                      for x in (stdout, stderr)]
+    stdout, stderr = (x.decode(sys.stdout.encoding)
+                      for x in (stdout, stderr))
     if p.returncode != 0:
-        raise RuntimeError("%r command error\n%s" % (cmd, stderr))
+        raise RuntimeError(f"{cmd!r} command error\n{stderr}")
     processors = stdout.strip().splitlines()
     return len(processors) or None
 
@@ -229,7 +229,7 @@ def net_if_stats():
     """Get NIC stats (isup, duplex, speed, mtu)."""
     duplex_map = {"Full": NIC_DUPLEX_FULL,
                   "Half": NIC_DUPLEX_HALF}
-    names = set([x[0] for x in net_if_addrs()])
+    names = {x[0] for x in net_if_addrs()}
     ret = {}
     for name in names:
         mtu = cext_posix.net_if_mtu(name)
@@ -243,8 +243,8 @@ def net_if_stats():
         p = subprocess.Popen(["/usr/bin/entstat", "-d", name],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
-        stdout, stderr = [x.decode(sys.stdout.encoding)
-                          for x in (stdout, stderr)]
+        stdout, stderr = (x.decode(sys.stdout.encoding)
+                          for x in (stdout, stderr))
         if p.returncode == 0:
             re_result = re.search(
                 r"Running: (\d+) Mbps.*?(\w+) Duplex", stdout)
@@ -324,7 +324,7 @@ def wrap_exceptions(fun):
     return wrapper
 
 
-class Process(object):
+class Process:
     """Wrapper class around underlying C implementation."""
 
     __slots__ = ["pid", "_name", "_ppid", "_procfs_path", "_cache"]
@@ -418,7 +418,7 @@ class Process(object):
             # is no longer there.
             if not retlist:
                 # will raise NSP if process is gone
-                os.stat('%s/%s' % (self._procfs_path, self.pid))
+                os.stat(f'{self._procfs_path}/{self.pid}')
             return retlist
 
     @wrap_exceptions
@@ -431,7 +431,7 @@ class Process(object):
         # is no longer there.
         if not ret:
             # will raise NSP if process is gone
-            os.stat('%s/%s' % (self._procfs_path, self.pid))
+            os.stat(f'{self._procfs_path}/{self.pid}')
         return ret
 
     @wrap_exceptions
@@ -477,10 +477,10 @@ class Process(object):
     def cwd(self):
         procfs_path = self._procfs_path
         try:
-            result = os.readlink("%s/%s/cwd" % (procfs_path, self.pid))
+            result = os.readlink(f"{procfs_path}/{self.pid}/cwd")
             return result.rstrip('/')
         except FileNotFoundError:
-            os.stat("%s/%s" % (procfs_path, self.pid))  # raise NSP or AD
+            os.stat(f"{procfs_path}/{self.pid}")  # raise NSP or AD
             return ""
 
     @wrap_exceptions
@@ -504,8 +504,8 @@ class Process(object):
         p = subprocess.Popen(["/usr/bin/procfiles", "-n", str(self.pid)],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
-        stdout, stderr = [x.decode(sys.stdout.encoding)
-                          for x in (stdout, stderr)]
+        stdout, stderr = (x.decode(sys.stdout.encoding)
+                          for x in (stdout, stderr))
         if "no such process" in stderr.lower():
             raise NoSuchProcess(self.pid, self._name)
         procfiles = re.findall(r"(\d+): S_IFREG.*\s*.*name:(.*)\n", stdout)
@@ -523,7 +523,7 @@ class Process(object):
     def num_fds(self):
         if self.pid == 0:       # no /proc/0/fd
             return 0
-        return len(os.listdir("%s/%s/fd" % (self._procfs_path, self.pid)))
+        return len(os.listdir(f"{self._procfs_path}/{self.pid}/fd"))
 
     @wrap_exceptions
     def num_ctx_switches(self):

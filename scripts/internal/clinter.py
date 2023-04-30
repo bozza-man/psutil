@@ -6,7 +6,6 @@
 
 """A super simple linter to check C syntax."""
 
-from __future__ import print_function
 
 import argparse
 import sys
@@ -18,7 +17,7 @@ warned = False
 def warn(path, line, lineno, msg):
     global warned
     warned = True
-    print("%s:%s: %s" % (path, lineno, msg), file=sys.stderr)
+    print(f"{path}:{lineno}: {msg}", file=sys.stderr)
 
 
 def check_line(path, line, idx, lines):
@@ -60,7 +59,7 @@ def check_line(path, line, idx, lines):
 
 
 def process(path):
-    with open(path, 'rt') as f:
+    with open(path) as f:
         lines = f.readlines()
     for idx, line in enumerate(lines):
         check_line(path, line, idx, lines)

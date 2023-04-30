@@ -11,7 +11,6 @@ This was originally written as a bat file but they suck so much
 that they should be deemed illegal!
 """
 
-from __future__ import print_function
 
 import argparse
 import atexit
@@ -190,7 +189,7 @@ def safe_rmtree(path):
 
 def recursive_rm(*patterns):
     """Recursively remove a file or matching a list of patterns."""
-    for root, dirs, files in os.walk(u'.'):
+    for root, dirs, files in os.walk('.'):
         root = os.path.normpath(root)
         if root.startswith('.git/'):
             continue
@@ -280,7 +279,7 @@ def install_pip():
             f.write(data)
 
         try:
-            sh('%s %s --user' % (PYTHON, tfile))
+            sh(f'{PYTHON} {tfile} --user')
         finally:
             os.remove(tfile)
 
@@ -321,7 +320,7 @@ def uninstall():
                 # easy_install can add a line (installation path) into
                 # easy-install.pth; that line alters sys.path.
                 path = os.path.join(dir, name)
-                with open(path, 'rt') as f:
+                with open(path) as f:
                     lines = f.readlines()
                     hasit = False
                     for line in lines:
@@ -329,12 +328,12 @@ def uninstall():
                             hasit = True
                             break
                 if hasit:
-                    with open(path, 'wt') as f:
+                    with open(path, 'w') as f:
                         for line in lines:
                             if 'psutil' not in line:
                                 f.write(line)
                             else:
-                                print("removed line %r from %r" % (line, path))
+                                print(f"removed line {line!r} from {path!r}")
 
 
 def clean():
@@ -367,7 +366,7 @@ def setup_dev_env():
     """Install useful deps"""
     install_pip()
     install_git_hooks()
-    sh("%s -m pip install -U %s" % (PYTHON, " ".join(DEPS)))
+    sh("{} -m pip install -U {}".format(PYTHON, " ".join(DEPS)))
 
 
 def flake8():
@@ -376,20 +375,20 @@ def flake8():
     py_files = py_files.decode()
     py_files = [x for x in py_files.split() if x.endswith('.py')]
     py_files = ' '.join(py_files)
-    sh("%s -m flake8 %s" % (PYTHON, py_files), nolog=True)
+    sh(f"{PYTHON} -m flake8 {py_files}", nolog=True)
 
 
 def test(name=RUNNER_PY):
     """Run tests"""
     build()
-    sh("%s %s" % (PYTHON, name))
+    sh(f"{PYTHON} {name}")
 
 
 def coverage():
     """Run coverage tests."""
     # Note: coverage options are controlled by .coveragerc file
     build()
-    sh("%s -m coverage run %s" % (PYTHON, RUNNER_PY))
+    sh(f"{PYTHON} -m coverage run {RUNNER_PY}")
     sh("%s -m coverage report" % PYTHON)
     sh("%s -m coverage html" % PYTHON)
     sh("%s -m webbrowser -t htmlcov/index.html" % PYTHON)
@@ -446,13 +445,13 @@ def test_testutils():
 def test_by_name(name):
     """Run test by name"""
     build()
-    sh("%s -m unittest -v %s" % (PYTHON, name))
+    sh(f"{PYTHON} -m unittest -v {name}")
 
 
 def test_failed():
     """Re-run tests which failed on last run."""
     build()
-    sh("%s %s --last-failed" % (PYTHON, RUNNER_PY))
+    sh(f"{PYTHON} {RUNNER_PY} --last-failed")
 
 
 def test_memleaks():
@@ -468,8 +467,8 @@ def install_git_hooks():
             ROOT_DIR, "scripts", "internal", "git_pre_commit.py")
         dst = os.path.realpath(
             os.path.join(ROOT_DIR, ".git", "hooks", "pre-commit"))
-        with open(src, "rt") as s:
-            with open(dst, "wt") as d:
+        with open(src) as s:
+            with open(dst, "w") as d:
                 d.write(s.read())
 
 

@@ -24,7 +24,7 @@ class AIXSpecificTestCase(PsutilTestCase):
         out = sh('/usr/bin/svmon -O unit=KB')
         re_pattern = r"memory\s*"
         for field in ("size inuse free pin virtual available mmode").split():
-            re_pattern += r"(?P<%s>\S+)\s+" % (field,)
+            re_pattern += fr"(?P<{field}>\S+)\s+"
         matchobj = re.search(re_pattern, out)
 
         self.assertIsNotNone(
@@ -78,7 +78,7 @@ class AIXSpecificTestCase(PsutilTestCase):
         for field in ("min maj mpcs mpcr dev soft dec ph cs ics bound rq "
                       "push S3pull S3grd S0rd S1rd S2rd S3rd S4rd S5rd "
                       "sysc").split():
-            re_pattern += r"(?P<%s>\S+)\s+" % (field,)
+            re_pattern += fr"(?P<{field}>\S+)\s+"
         matchobj = re.search(re_pattern, out)
 
         self.assertIsNotNone(

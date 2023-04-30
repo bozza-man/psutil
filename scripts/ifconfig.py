@@ -43,7 +43,6 @@ wlp3s0:
          broadcast : ff:ff:ff:ff:ff:ff
 """
 
-from __future__ import print_function
 
 import socket
 
@@ -72,17 +71,17 @@ def main():
         if nic in stats:
             st = stats[nic]
             print("    stats          : ", end='')
-            print("speed=%sMB, duplex=%s, mtu=%s, up=%s" % (
+            print("speed={}MB, duplex={}, mtu={}, up={}".format(
                 st.speed, duplex_map[st.duplex], st.mtu,
                 "yes" if st.isup else "no"))
         if nic in io_counters:
             io = io_counters[nic]
             print("    incoming       : ", end='')
-            print("bytes=%s, pkts=%s, errs=%s, drops=%s" % (
+            print("bytes={}, pkts={}, errs={}, drops={}".format(
                 bytes2human(io.bytes_recv), io.packets_recv, io.errin,
                 io.dropin))
             print("    outgoing       : ", end='')
-            print("bytes=%s, pkts=%s, errs=%s, drops=%s" % (
+            print("bytes={}, pkts={}, errs={}, drops={}".format(
                 bytes2human(io.bytes_sent), io.packets_sent, io.errout,
                 io.dropout))
         for addr in addrs:

@@ -12,7 +12,6 @@ asus
     cpu_fan              3200 RPM
 """
 
-from __future__ import print_function
 
 import sys
 

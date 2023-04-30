@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Copyright (c) 2009, Giampaolo Rodola'. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,7 +6,6 @@
 Test utilities.
 """
 
-from __future__ import print_function
 
 import atexit
 import contextlib
@@ -273,7 +270,7 @@ class ThreadTask(threading.Thread):
 
     def __repr__(self):
         name = self.__class__.__name__
-        return '<%s running=%s at %#x>' % (name, self._running, id(self))
+        return f'<{name} running={self._running} at {id(self):#x}>'
 
     def __enter__(self):
         self.start()
@@ -375,13 +372,13 @@ def spawn_children_pair():
         s = textwrap.dedent("""\
             import subprocess, os, sys, time
             s = "import os, time;"
-            s += "f = open('%s', 'w');"
+            s += "f = open('{}', 'w');"
             s += "f.write(str(os.getpid()));"
             s += "f.close();"
             s += "time.sleep(60);"
-            p = subprocess.Popen([r'%s', '-c', s])
+            p = subprocess.Popen([r'{}', '-c', s])
             p.wait()
-            """ % (os.path.basename(testfn), PYTHON_EXE))
+            """.format(os.path.basename(testfn), PYTHON_EXE))
         # On Windows if we create a subprocess with CREATE_NO_WINDOW flag
         # set (which is the default) a "conhost.exe" extra process will be
         # spawned as a child. We don't want that.
@@ -452,7 +449,7 @@ def pyrun(src, **kwds):
     kwds.setdefault("stderr", None)
     srcfile = get_testfn()
     try:
-        with open(srcfile, 'wt') as f:
+        with open(srcfile, 'w') as f:
             f.write(src)
         subp = spawn_testproc([PYTHON_EXE, f.name], **kwds)
         wait_for_pid(subp.pid)
@@ -643,7 +640,7 @@ def get_winver():
 # ===================================================================
 
 
-class retry(object):
+class retry:
     """A retry decorator."""
 
     def __init__(self,
@@ -752,7 +749,7 @@ def safe_rmpath(path):
                 return fun()
             except FileNotFoundError:
                 pass
-            except WindowsError as _:
+            except OSError as _:
                 err = _
                 warn("ignoring %s" % (str(err)))
             time.sleep(0.01)
@@ -807,7 +804,7 @@ def create_exe(outpath, c_code=None):
                 }
                 """)
         assert isinstance(c_code, str), c_code
-        with open(get_testfn(suffix='.c'), 'wt') as f:
+        with open(get_testfn(suffix='.c'), 'w') as f:
             f.write(c_code)
         try:
             subprocess.check_call(["gcc", f.name, "-o", outpath])
@@ -846,7 +843,7 @@ class TestCase(unittest.TestCase):
         fqmod = self.__class__.__module__
         if not fqmod.startswith('psutil.'):
             fqmod = 'psutil.tests.' + fqmod
-        return "%s.%s.%s" % (
+        return "{}.{}.{}".format(
             fqmod, self.__class__.__name__, self._testMethodName)
 
     # assertRaisesRegexp renamed to assertRaisesRegex in 3.3;
@@ -988,7 +985,7 @@ class TestMemoryLeak(PsutilTestCase):
             type_ = "fd" if POSIX else "handle"
             if diff > 1:
                 type_ += "s"
-            msg = "%s unclosed %s after calling %r" % (diff, type_, fun)
+            msg = f"{diff} unclosed {type_} after calling {fun!r}"
             raise self.fail(msg)
 
     def _call_ntimes(self, fun, times):
@@ -1012,7 +1009,7 @@ class TestMemoryLeak(PsutilTestCase):
         increase = times
         for idx in range(1, retries + 1):
             mem = self._call_ntimes(fun, times)
-            msg = "Run #%s: extra-mem=%s, per-call=%s, calls=%s" % (
+            msg = "Run #{}: extra-mem={}, per-call={}, calls={}".format(
                 idx, bytes2human(mem), bytes2human(mem / times), times)
             messages.append(msg)
             success = mem <= tolerance or mem <= prev_mem
@@ -1091,7 +1088,7 @@ def print_sysinfo():
         if hasattr(platform, 'win32_edition'):
             info['OS'] += ", " + platform.win32_edition()
     else:
-        info['OS'] = "%s %s" % (platform.system(), platform.version())
+        info['OS'] = f"{platform.system()} {platform.version()}"
     info['arch'] = ', '.join(
         list(platform.architecture()) + [platform.machine()])
     if psutil.POSIX:
@@ -1120,7 +1117,7 @@ def print_sysinfo():
     # system
     info['fs-encoding'] = sys.getfilesystemencoding()
     lang = locale.getlocale()
-    info['lang'] = '%s, %s' % (lang[0], lang[1])
+    info['lang'] = f'{lang[0]}, {lang[1]}'
     info['boot-time'] = datetime.datetime.fromtimestamp(
         psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
     info['time'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1136,10 +1133,10 @@ def print_sysinfo():
     info['loadavg'] = "%.1f%%, %.1f%%, %.1f%%" % (
         tuple([x / psutil.cpu_count() * 100 for x in psutil.getloadavg()]))
     mem = psutil.virtual_memory()
-    info['memory'] = "%s%%, used=%s, total=%s" % (
+    info['memory'] = "{}%, used={}, total={}".format(
         int(mem.percent), bytes2human(mem.used), bytes2human(mem.total))
     swap = psutil.swap_memory()
-    info['swap'] = "%s%%, used=%s, total=%s" % (
+    info['swap'] = "{}%, used={}, total={}".format(
         int(swap.percent), bytes2human(swap.used), bytes2human(swap.total))
     info['pids'] = len(psutil.pids())
     pinfo = psutil.Process().as_dict()
@@ -1285,15 +1282,15 @@ class process_namespace:
         for fun_name, _, _ in ls:
             meth_name = 'test_' + fun_name
             if not hasattr(test_class, meth_name):
-                msg = "%r class should define a '%s' method" % (
+                msg = "{!r} class should define a '{}' method".format(
                     test_class.__class__.__name__, meth_name)
                 raise AttributeError(msg)
 
     @classmethod
     def test(cls):
-        this = set([x[0] for x in cls.all])
-        ignored = set([x[0] for x in cls.ignored])
-        klass = set([x for x in dir(psutil.Process) if x[0] != '_'])
+        this = {x[0] for x in cls.all}
+        ignored = {x[0] for x in cls.ignored}
+        klass = {x for x in dir(psutil.Process) if x[0] != '_'}
         leftout = (this | ignored) ^ klass
         if leftout:
             raise ValueError("uncovered Process class names: %r" % leftout)
@@ -1586,7 +1583,7 @@ def check_connection_ntuple(conn):
             with contextlib.closing(s):
                 try:
                     s.bind((conn.laddr[0], 0))
-                except socket.error as err:
+                except OSError as err:
                     if err.errno != errno.EADDRNOTAVAIL:
                         raise
         elif conn.family == AF_UNIX:

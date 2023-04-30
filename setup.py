@@ -6,7 +6,6 @@
 
 """Cross-platform lib for process and system monitoring in Python."""
 
-from __future__ import print_function
 
 import contextlib
 import glob
@@ -93,7 +92,7 @@ if not PYPY:
 
 def get_version():
     INIT = os.path.join(HERE, 'psutil/__init__.py')
-    with open(INIT, 'r') as f:
+    with open(INIT) as f:
         for line in f:
             if line.startswith('__version__'):
                 ret = eval(line.strip().split(' = ')[1])

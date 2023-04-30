@@ -14,7 +14,6 @@ status:     discharging
 plugged in: no
 """
 
-from __future__ import print_function
 
 import sys
 

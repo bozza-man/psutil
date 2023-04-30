@@ -35,7 +35,6 @@ PID     User    Cmdline                            USS     PSS    Swap     RSS
 32486   giampao skype                           145.1M  147.5M      0B  149.6M
 """
 
-from __future__ import print_function
 
 import sys
 
@@ -54,7 +53,7 @@ def convert_bytes(n):
     for s in reversed(symbols):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
-            return '%.1f%s' % (value, s)
+            return f'{value:.1f}{s}'
     return "%sB" % n
 
 

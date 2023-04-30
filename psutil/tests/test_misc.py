@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2009, Giampaolo Rodola'. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -184,7 +183,7 @@ class TestSpecialMethods(PsutilTestCase):
         self.assertNotEqual(p1, 'foo')
 
     def test_process__hash__(self):
-        s = set([psutil.Process(), psutil.Process()])
+        s = {psutil.Process(), psutil.Process()}
         self.assertEqual(len(s), 1)
 
 
@@ -558,7 +557,7 @@ class TestCommonModule(PsutilTestCase):
 
     def test_cat_bcat(self):
         testfn = self.get_testfn()
-        with open(testfn, "wt") as f:
+        with open(testfn, "w") as f:
             f.write("foo")
         self.assertEqual(cat(testfn), "foo")
         self.assertEqual(bcat(testfn), b"foo")
@@ -731,7 +730,7 @@ class TestWrapNumbers(PsutilTestCase):
         self.assertEqual(
             cache[1],
             {'disk_io': {('disk1', 0): 0, ('disk1', 1): 0, ('disk1', 2): 100}})
-        self.assertEqual(cache[2], {'disk_io': {'disk1': set([('disk1', 2)])}})
+        self.assertEqual(cache[2], {'disk_io': {'disk1': {('disk1', 2)}}})
 
         def check_cache_info():
             cache = wrap_numbers.cache_info()
@@ -740,7 +739,7 @@ class TestWrapNumbers(PsutilTestCase):
                 {'disk_io': {('disk1', 0): 0, ('disk1', 1): 0,
                              ('disk1', 2): 100}})
             self.assertEqual(cache[2],
-                             {'disk_io': {'disk1': set([('disk1', 2)])}})
+                             {'disk_io': {'disk1': {('disk1', 2)}}})
 
         # then it remains the same
         input = {'disk1': nt(100, 100, 10)}
@@ -764,7 +763,7 @@ class TestWrapNumbers(PsutilTestCase):
         self.assertEqual(
             cache[1],
             {'disk_io': {('disk1', 0): 0, ('disk1', 1): 0, ('disk1', 2): 190}})
-        self.assertEqual(cache[2], {'disk_io': {'disk1': set([('disk1', 2)])}})
+        self.assertEqual(cache[2], {'disk_io': {'disk1': {('disk1', 2)}}})
 
     def test_cache_changing_keys(self):
         input = {'disk1': nt(5, 5, 5)}
@@ -840,7 +839,7 @@ class TestScripts(PsutilTestCase):
     @staticmethod
     def assert_syntax(exe):
         exe = os.path.join(SCRIPTS_DIR, exe)
-        with open(exe, 'rt', encoding='utf8') as f:
+        with open(exe, encoding='utf8') as f:
             src = f.read()
         ast.parse(src)
 

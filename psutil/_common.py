@@ -7,8 +7,6 @@
 # Note: this module is imported by setup.py so it should not import
 # psutil or third-party modules.
 
-from __future__ import division
-from __future__ import print_function
 
 import collections
 import contextlib
@@ -282,7 +280,7 @@ class Error(Exception):
         info = self._infodict(("pid", "ppid", "name"))
         if info:
             details = "(%s)" % ", ".join(
-                ["%s=%r" % (k, v) for k, v in info.items()])
+                [f"{k}={v!r}" for k, v in info.items()])
         else:
             details = None
         return " ".join([x for x in (getattr(self, "msg", ""), details) if x])
@@ -290,8 +288,8 @@ class Error(Exception):
     def __repr__(self):
         # invoked on `repr(Error)`
         info = self._infodict(("pid", "ppid", "name", "seconds", "msg"))
-        details = ", ".join(["%s=%r" % (k, v) for k, v in info.items()])
-        return "psutil.%s(%s)" % (self.__class__.__name__, details)
+        details = ", ".join([f"{k}={v!r}" for k, v in info.items()])
+        return f"psutil.{self.__class__.__name__}({details})"
 
 
 class NoSuchProcess(Error):
@@ -517,7 +515,7 @@ def supports_ipv6():
         with contextlib.closing(sock):
             sock.bind(("::1", 0))
         return True
-    except socket.error:
+    except OSError:
         return False
 
 
@@ -593,8 +591,9 @@ def deprecated_method(replacement):
     'replcement' is the method name which will be called instead.
     """
     def outer(fun):
-        msg = "%s() is deprecated and will be removed; use %s() instead" % (
-            fun.__name__, replacement)
+        msg = (
+            f"{fun.__name__}() is deprecated and will be removed; "
+            f"use {replacement}() instead")
         if fun.__doc__ is None:
             fun.__doc__ = msg
 
@@ -733,7 +732,7 @@ def open_text(fname):
     # See:
     # https://github.com/giampaolo/psutil/issues/675
     # https://github.com/giampaolo/psutil/pull/733
-    fobj = open(fname, "rt", buffering=FILE_READ_BUFFER_SIZE,
+    fobj = open(fname, buffering=FILE_READ_BUFFER_SIZE,
                 encoding=ENCODING, errors=ENCODING_ERRS)
     try:
         # Dictates per-line read(2) buffer size. Defaults is 8k. See:
@@ -761,7 +760,7 @@ def cat(fname, fallback=_DEFAULT, _open=open_text):
         try:
             with _open(fname) as f:
                 return f.read()
-        except (IOError, OSError):
+        except OSError:
             return fallback
 
 
@@ -835,7 +834,7 @@ def hilite(s, color=None, bold=False):  # pragma: no cover
     attr.append(color)
     if bold:
         attr.append('1')
-    return '\x1b[%sm%s\x1b[0m' % (';'.join(attr), s)
+    return '\x1b[{}m{}\x1b[0m'.format(';'.join(attr), s)
 
 
 def print_color(
@@ -858,7 +857,7 @@ def print_color(
         try:
             color = colors[color]
         except KeyError:
-            raise ValueError("invalid color %r; choose between %r" % (
+            raise ValueError("invalid color {!r}; choose between {!r}".format(
                 color, list(colors.keys())))
         if bold and color <= 7:
             color += 8
@@ -885,5 +884,5 @@ def debug(msg):
                 msg = "ignoring %s" % msg
             else:
                 msg = "ignoring %r" % msg
-        print("psutil-debug [%s:%s]> %s" % (fname, lineno, msg),  # NOQA
+        print(f"psutil-debug [{fname}:{lineno}]> {msg}",  # NOQA
               file=sys.stderr)

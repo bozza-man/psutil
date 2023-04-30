@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 # Copyright (c) 2009, Giampaolo Rodola'. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -330,7 +329,7 @@ class TestSystemAPIs(PsutilTestCase):
                     break
             else:
                 raise self.fail(
-                    "couldn't find %s nic in 'ifconfig -a' output\n%s" % (
+                    "couldn't find {} nic in 'ifconfig -a' output\n{}".format(
                         nic, output))
 
     # @unittest.skipIf(CI_TESTING and not psutil.users(), "unreliable on CI")
